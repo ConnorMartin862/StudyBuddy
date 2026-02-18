@@ -1,0 +1,25 @@
+screens:
+- login
+	- create account
+		- preferences fill out
+		- schedule fill out
+		- classes you're in
+- home page
+	- class list
+	- bottom bar
+		- chat, home, settings
+	- top bar
+		- profile
+- your profile
+	- schedule
+	- preferences
+	- classes
+- class page
+    - student list
+    - chat(?)
+- student-to-student interface
+    - list of people you've pushed
+        - upon clicking, gives their info
+- other student profiles
+    - same as perosonal profile, just more private\
+        - no editing
