@@ -43,7 +43,7 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.classCard, { borderLeftColor: item.color }]}
-            onPress={() => router.push(`/class/${item.id}`)}
+            onPress={() => router.push({ pathname: '/home/class', params: { id: item.id } })}
           >
             <ThemedText type="subtitle" style={{ color: '#ffffff' }}>{item.name}</ThemedText>
             <IconSymbol name="chevron.right" size={20} color="#999" />
