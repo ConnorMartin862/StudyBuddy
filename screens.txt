@@ -4,25 +4,25 @@ screens:
 		- preferences fill out
 		- schedule fill out
 		- classes you're in
-- home page (1)
+- home page (1) (DONE)
 	- class list (->3)
 	- bottom bar
 		- student to student interface (->4), home, settings
     - add class (->6)
 	- top bar
 		- profile (->2)
-- your profile (2)
+- your profile (2) (DONE)
 	- schedule
 	- preferences
 	- classes
-- class page (3)
+- class page (3) (IN PROGRESS)
     - student list (->5)
     - chat(?)
-- student-to-student interface (4)
+- student-to-student interface (4) (DONE)
     - list of people you've pushed
         - upon clicking, gives their info (->5)
-- other student profiles (5)
+- other student profiles (5) (DONE)
     - same as perosonal profile, just more private
         - no editing
-- add classes (6)
+- add classes (6) (IN PROGRESS)
     - list of classes available to add (info from atlas(?))

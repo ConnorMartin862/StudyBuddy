@@ -18,6 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile', headerBackTitle: 'Home' }} />
+        <Stack.Screen name="student/[id]" options={{ title: 'Student Profile', headerBackTitle: 'Matches' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
