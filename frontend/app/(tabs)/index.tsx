@@ -23,7 +23,7 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       {/* Header with profile button */}
       <ThemedView style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/modal')}>
+        <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>
         <Image 
