@@ -26,3 +26,12 @@ screens:
         - no editing
 - add classes (6) (IN PROGRESS)
     - list of classes available to add (info from atlas(?))
+
+
+
+IMPORTANT INFO
+- supabase password: 1Qqqswert$$
+- how to start server: 
+	1) cd backend
+	2) node index.js
+- token to test protected routes: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmN2U4OTU4LTQwNDYtNGUwZC1hNTNlLTgwOGIzMGU2MDc2NSIsImVtYWlsIjoidGVzdEB1bWljaC5lZHUiLCJpYXQiOjE3NzI2NDk2NTAsImV4cCI6MTc3MzI1NDQ1MH0.Z5ysepmChavKPqYX3fJj9rqnPxPv0p0CKUAmfJVr0qU
