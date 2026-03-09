@@ -186,7 +186,7 @@ export default function ProfileScreen() {
     setClassDraft('');
     setAddClassVisible(false);
     try {
-      await updateMyProfile({ preferences: prefs, schedule: blocks });
+      await updateMyProfile({ classes: next });
     } catch (e) {
       console.error('Failed to save class', e);
     }
@@ -196,7 +196,7 @@ export default function ProfileScreen() {
     const next = classes.filter((_, i) => i !== idx);
     setClasses(next);
     try {
-      await updateMyProfile({ preferences: prefs, schedule: blocks });
+      await updateMyProfile({ classes: next });
     } catch (e) {
       console.error('Failed to remove class', e);
     }
