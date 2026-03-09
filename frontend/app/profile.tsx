@@ -267,9 +267,6 @@ export default function ProfileScreen() {
         <View style={[s.card, { marginBottom: 32 }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Classes</Text>
-            <TouchableOpacity onPress={() => setAddClassVisible(true)} style={s.addBtn}>
-              <Ionicons name="add" size={20} color={C.white} />
-            </TouchableOpacity>
           </View>
           {classes.length === 0 && (
             <Text style={s.emptyTxt}>No classes yet — tap + to add one.</Text>
