@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   SafeAreaView,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import { getMyProfile, updateMyProfile } from '@/utils/api';
 
-// ── Colour tokens (match your tab bar / home page) ──────────────────────────
 const C = {
-  headerBg: '#1565c0',   // deep blue header
-  accent:   '#2e7d32',   // green (matches tab bar)
+  headerBg: '#1565c0',
+  accent:   '#2e7d32',
   accentLt: '#43a047',
   white:    '#ffffff',
   bg:       '#f5f5f5',
@@ -27,37 +29,15 @@ const C = {
   green:    '#43a047',
 };
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 8 AM – 9 PM
-
-// Each block: { day (0-6), startHour, endHour, label, color }
-const DEFAULT_BLOCKS = [
-  { day: 1, startHour: 9,  endHour: 10.5, label: 'EECS 441', color: C.red },
-  { day: 3, startHour: 9,  endHour: 10.5, label: 'EECS 441', color: C.red },
-  { day: 1, startHour: 12, endHour: 13,   label: 'MATH 215', color: C.green },
-  { day: 2, startHour: 14, endHour: 15.5, label: 'EECS 376', color: C.amber },
-  { day: 4, startHour: 14, endHour: 15.5, label: 'EECS 376', color: C.amber },
-  { day: 3, startHour: 11, endHour: 12,   label: 'MATH 215', color: C.green },
-  { day: 5, startHour: 10, endHour: 11,   label: 'SI 339',   color: '#8e24aa' },
-];
-
-const DEFAULT_PREFS = [
-  'Likes to do Homework Early',
-  'Tends not to plan out problems.',
-  'Night Owl',
-];
-
-const DEFAULT_CLASSES = ['EECS 441', 'EECS 376', 'MATH 215', 'SI 339'];
-
-// ── Schedule grid ────────────────────────────────────────────────────────────
+const DAYS  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
 const CELL_H = 44;
-const HOUR_RANGE = 14; // 8 AM to 10 PM
 
-function ScheduleGrid({ blocks }: { blocks: typeof DEFAULT_BLOCKS }) {
+type Block = { day: number; startHour: number; endHour: number; label: string; color: string };
+
+function ScheduleGrid({ blocks }: { blocks: Block[] }) {
   return (
     <View style={sg.wrapper}>
-      {/* Day headers */}
       <View style={sg.headerRow}>
         <View style={sg.timeCol} />
         {DAYS.map(d => (
@@ -66,41 +46,26 @@ function ScheduleGrid({ blocks }: { blocks: typeof DEFAULT_BLOCKS }) {
           </View>
         ))}
       </View>
-
-      {/* Grid body */}
       <View style={sg.body}>
-        {/* Hour labels */}
         <View style={sg.timeCol}>
           {HOURS.map(h => (
-            <View key={h} style={[sg.hourCell]}>
-              <Text style={sg.hourLabel}>
-                {h <= 12 ? `${h}a` : `${h - 12}p`}
-              </Text>
+            <View key={h} style={sg.hourCell}>
+              <Text style={sg.hourLabel}>{h <= 12 ? `${h}a` : `${h - 12}p`}</Text>
             </View>
           ))}
         </View>
-
-        {/* Day columns with grid lines */}
         {DAYS.map((d, di) => (
           <View key={d} style={sg.dayCol}>
-            {HOURS.map(h => (
-              <View key={h} style={sg.gridCell} />
-            ))}
-            {/* Render blocks for this day */}
-            {blocks
-              .filter(b => b.day === di)
-              .map((b, i) => {
-                const top    = (b.startHour - 8) * CELL_H;
-                const height = (b.endHour - b.startHour) * CELL_H - 2;
-                return (
-                  <View
-                    key={i}
-                    style={[sg.block, { top, height, backgroundColor: b.color }]}
-                  >
-                    <Text style={sg.blockText} numberOfLines={2}>{b.label}</Text>
-                  </View>
-                );
-              })}
+            {HOURS.map(h => <View key={h} style={sg.gridCell} />)}
+            {blocks.filter(b => b.day === di).map((b, i) => {
+              const top    = (b.startHour - 8) * CELL_H;
+              const height = (b.endHour - b.startHour) * CELL_H - 2;
+              return (
+                <View key={i} style={[sg.block, { top, height, backgroundColor: b.color }]}>
+                  <Text style={sg.blockText} numberOfLines={2}>{b.label}</Text>
+                </View>
+              );
+            })}
           </View>
         ))}
       </View>
@@ -109,71 +74,157 @@ function ScheduleGrid({ blocks }: { blocks: typeof DEFAULT_BLOCKS }) {
 }
 
 const sg = StyleSheet.create({
-  wrapper:    { borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
-  headerRow:  { flexDirection: 'row', backgroundColor: C.headerBg },
-  timeCol:    { width: 32 },
-  dayCol:     { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
-  dayLabel:   { color: C.white, fontSize: 10, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
-  body:       { flexDirection: 'row', backgroundColor: C.card },
-  hourCell:   { height: CELL_H, justifyContent: 'flex-start', alignItems: 'flex-end', paddingRight: 2 },
-  hourLabel:  { fontSize: 8, color: C.textSec },
-  gridCell:   { height: CELL_H, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  wrapper:   { borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
+  headerRow: { flexDirection: 'row', backgroundColor: C.headerBg },
+  timeCol:   { width: 32 },
+  dayCol:    { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
+  dayLabel:  { color: C.white, fontSize: 10, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
+  body:      { flexDirection: 'row', backgroundColor: C.card },
+  hourCell:  { height: CELL_H, justifyContent: 'flex-start', alignItems: 'flex-end', paddingRight: 2 },
+  hourLabel: { fontSize: 8, color: C.textSec },
+  gridCell:  { height: CELL_H, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   block: {
-    position:     'absolute',
-    left:         1,
-    right:        1,
-    borderRadius: 4,
-    paddingHorizontal: 2,
-    paddingTop:   2,
-    zIndex:       10,
+    position: 'absolute', left: 1, right: 1,
+    borderRadius: 4, paddingHorizontal: 2, paddingTop: 2, zIndex: 10,
   },
-  blockText:  { color: C.white, fontSize: 8, fontWeight: '700' },
+  blockText: { color: C.white, fontSize: 8, fontWeight: '700' },
 });
 
-// ── Main profile screen ──────────────────────────────────────────────────────
 export default function ProfileScreen() {
-  const [prefs,   setPrefs]   = useState(DEFAULT_PREFS);
-  const [classes, setClasses] = useState(DEFAULT_CLASSES);
-  const [blocks]              = useState(DEFAULT_BLOCKS);
+  const [loading, setLoading]   = useState(true);
+  const [name,    setName]      = useState('');
+  const [email,   setEmail]     = useState('');
+  const [prefs,   setPrefs]     = useState<string[]>([]);
+  const [classes, setClasses]   = useState<string[]>([]);
+  const [blocks,  setBlocks]    = useState<Block[]>([]);
 
-  // edit-preference modal
+  // Edit preference modal
   const [editPrefVisible, setEditPrefVisible] = useState(false);
   const [editingPrefIdx,  setEditingPrefIdx]  = useState<number | null>(null);
   const [prefDraft,       setPrefDraft]       = useState('');
+
+  // Add class modal
+  const [addClassVisible, setAddClassVisible] = useState(false);
+  const [classDraft,      setClassDraft]      = useState('');
+
+  // Load profile from API whenever screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [])
+  );
+
+  const loadProfile = async () => {
+  console.log('loadProfile called');
+  setLoading(true);
+  try {
+    const data = await getMyProfile();
+    console.log('Profile data:', JSON.stringify(data));
+    setName(data.name ?? '');
+    setEmail(data.email ?? '');
+    setPrefs(data.preferences ?? []);
+    setClasses(data.classes ?? []);
+    setBlocks(data.schedule ?? []);
+  } catch (e: any) {
+    console.error('Failed to load profile:', e.message, JSON.stringify(e));
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Save preferences to backend
+  const savePrefs = async (newPrefs: string[]) => {
+    setPrefs(newPrefs);
+    try {
+      await updateMyProfile({ preferences: newPrefs });
+    } catch (e) {
+      console.error('Failed to save prefs', e);
+    }
+  };
+
+  // Save classes to backend
+  const saveClasses = async (newClasses: string[]) => {
+    setClasses(newClasses);
+    try {
+      await updateMyProfile({ preferences: prefs, schedule: blocks });
+    } catch (e) {
+      console.error('Failed to save classes', e);
+    }
+  };
 
   const openEditPref = (idx: number) => {
     setEditingPrefIdx(idx);
     setPrefDraft(prefs[idx]);
     setEditPrefVisible(true);
   };
-  const savePref = () => {
+
+  const savePref = async () => {
     if (editingPrefIdx === null) return;
     const next = [...prefs];
     next[editingPrefIdx] = prefDraft;
-    setPrefs(next);
+    await savePrefs(next);
     setEditPrefVisible(false);
   };
+
   const addPref = () => {
-    setPrefs(p => [...p, 'New preference']);
-    openEditPref(prefs.length);
+    const newPrefs = [...prefs, ''];
+    setPrefs(newPrefs);
+    setEditingPrefIdx(newPrefs.length - 1);
+    setPrefDraft('');
+    setEditPrefVisible(true);
   };
+
+  const deletePref = async (idx: number) => {
+    const next = prefs.filter((_, i) => i !== idx);
+    await savePrefs(next);
+  };
+
+  const addClass = async () => {
+    if (!classDraft.trim()) return;
+    const next = [...classes, classDraft.trim()];
+    setClasses(next);
+    setClassDraft('');
+    setAddClassVisible(false);
+    try {
+      await updateMyProfile({ preferences: prefs, schedule: blocks });
+    } catch (e) {
+      console.error('Failed to save class', e);
+    }
+  };
+
+  const removeClass = async (idx: number) => {
+    const next = classes.filter((_, i) => i !== idx);
+    setClasses(next);
+    try {
+      await updateMyProfile({ preferences: prefs, schedule: blocks });
+    } catch (e) {
+      console.error('Failed to remove class', e);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={C.headerBg} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe}>
-      {/* ── Header ── */}
       <View style={s.header}>
         <View style={s.avatarRing}>
           <View style={s.avatar}>
-            <Text style={s.avatarInitial}>C</Text>
+            <Text style={s.avatarInitial}>{name?.[0]?.toUpperCase() ?? '?'}</Text>
           </View>
         </View>
-        <Text style={s.name}>Connor Martin</Text>
-        <Text style={s.email}>connormm@umich.edu</Text>
+        <Text style={s.name}>{name}</Text>
+        <Text style={s.email}>{email}</Text>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── Preferences card ── */}
+        {/* Preferences */}
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Preferences</Text>
@@ -181,43 +232,53 @@ export default function ProfileScreen() {
               <Ionicons name="add" size={20} color={C.white} />
             </TouchableOpacity>
           </View>
+          {prefs.length === 0 && (
+            <Text style={s.emptyTxt}>No preferences yet — tap + to add one.</Text>
+          )}
           {prefs.map((p, i) => (
             <TouchableOpacity key={i} onPress={() => openEditPref(i)} style={s.prefRow}>
               <View style={s.bullet} />
               <Text style={s.prefText}>{p}</Text>
-              <Ionicons name="pencil-outline" size={14} color={C.textSec} />
+              <TouchableOpacity onPress={() => deletePref(i)}>
+                <Ionicons name="close-circle-outline" size={18} color={C.textSec} />
+              </TouchableOpacity>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* ── Schedule card ── */}
+        {/* Schedule */}
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Schedule</Text>
-            <TouchableOpacity style={s.addBtn}>
-              <Ionicons name="add" size={20} color={C.white} />
-            </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ width: 340 }}>
-              <ScheduleGrid blocks={blocks} />
-            </View>
-          </ScrollView>
+          {blocks.length === 0
+            ? <Text style={s.emptyTxt}>No schedule added yet.</Text>
+            : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ width: 340 }}>
+                  <ScheduleGrid blocks={blocks} />
+                </View>
+              </ScrollView>
+            )
+          }
         </View>
 
-        {/* ── Classes card ── */}
+        {/* Classes */}
         <View style={[s.card, { marginBottom: 32 }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Classes</Text>
-            <TouchableOpacity style={s.addBtn}>
+            <TouchableOpacity onPress={() => setAddClassVisible(true)} style={s.addBtn}>
               <Ionicons name="add" size={20} color={C.white} />
             </TouchableOpacity>
           </View>
+          {classes.length === 0 && (
+            <Text style={s.emptyTxt}>No classes yet — tap + to add one.</Text>
+          )}
           <View style={s.chipWrap}>
             {classes.map((c, i) => (
               <View key={i} style={s.chip}>
                 <Text style={s.chipText}>{c}</Text>
-                <TouchableOpacity onPress={() => setClasses(cl => cl.filter((_, j) => j !== i))}>
+                <TouchableOpacity onPress={() => removeClass(i)}>
                   <Ionicons name="close-circle" size={16} color={C.accentLt} />
                 </TouchableOpacity>
               </View>
@@ -227,7 +288,7 @@ export default function ProfileScreen() {
 
       </ScrollView>
 
-      {/* ── Edit preference modal ── */}
+      {/* Edit preference modal */}
       <Modal visible={editPrefVisible} transparent animationType="fade">
         <View style={m.overlay}>
           <View style={m.sheet}>
@@ -238,6 +299,7 @@ export default function ProfileScreen() {
               onChangeText={setPrefDraft}
               autoFocus
               multiline
+              placeholder="e.g. Night owl, likes quiet spaces..."
             />
             <View style={m.row}>
               <TouchableOpacity style={m.cancel} onPress={() => setEditPrefVisible(false)}>
@@ -250,16 +312,38 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Add class modal */}
+      <Modal visible={addClassVisible} transparent animationType="fade">
+        <View style={m.overlay}>
+          <View style={m.sheet}>
+            <Text style={m.title}>Add Class</Text>
+            <TextInput
+              style={m.input}
+              value={classDraft}
+              onChangeText={setClassDraft}
+              autoFocus
+              placeholder="e.g. EECS 441"
+              autoCapitalize="characters"
+            />
+            <View style={m.row}>
+              <TouchableOpacity style={m.cancel} onPress={() => setAddClassVisible(false)}>
+                <Text style={m.cancelTxt}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={m.save} onPress={addClass}>
+                <Text style={m.saveTxt}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: C.bg },
   scroll: { padding: 16, paddingTop: 8 },
-
-  // Header
   header: {
     backgroundColor: C.headerBg,
     alignItems: 'center',
@@ -280,8 +364,6 @@ const s = StyleSheet.create({
   avatarInitial: { color: C.white, fontSize: 28, fontWeight: '700' },
   name:  { color: C.white, fontSize: 20, fontWeight: '700' },
   email: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
-
-  // Cards
   card: {
     backgroundColor: C.card,
     borderRadius: 12,
@@ -307,8 +389,6 @@ const s = StyleSheet.create({
     backgroundColor: C.accent,
     alignItems: 'center', justifyContent: 'center',
   },
-
-  // Preferences
   prefRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 10,
@@ -319,8 +399,6 @@ const s = StyleSheet.create({
     backgroundColor: C.accent, marginRight: 10,
   },
   prefText: { flex: 1, fontSize: 13, color: C.textPri },
-
-  // Classes chips
   chipWrap: {
     flexDirection: 'row', flexWrap: 'wrap',
     padding: 12, gap: 8,
@@ -333,9 +411,9 @@ const s = StyleSheet.create({
     gap: 6,
   },
   chipText: { color: C.accent, fontSize: 13, fontWeight: '600' },
+  emptyTxt: { color: C.textSec, fontSize: 13, padding: 14, fontStyle: 'italic' },
 });
 
-// Modal styles
 const m = StyleSheet.create({
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',

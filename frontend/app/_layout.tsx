@@ -1,32 +1,41 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/auth';
 
+import { useColorScheme } from '@/hooks/use-color-scheme';
+
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+
+  // Only runs once when app first loads
+  useEffect(() => {
+    AsyncStorage.getItem('token').then((token) => {
+      if (!token) {
+        router.replace('/login');
+      }
+    });
+  }, []);
 
   return (
-    <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AuthProvider>
         <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="profile" options={{ title: 'Profile', headerBackTitle: 'Home' }} />
+          <Stack.Screen name="(tabs)"       options={{ headerShown: false }} />
+          <Stack.Screen name="modal"        options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="profile"      options={{ title: 'Profile', headerBackTitle: 'Home' }} />
           <Stack.Screen name="student/[id]" options={{ title: 'Student Profile', headerBackTitle: 'Matches' }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="register" options={{ headerShown: false }} />
+          <Stack.Screen name="login"        options={{ headerShown: false }} />
         </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </AuthProvider>
-
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

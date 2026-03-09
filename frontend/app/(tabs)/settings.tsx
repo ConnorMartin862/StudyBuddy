@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
+import { logout } from '@/utils/api';
 
 const SETTINGS = [
   { id: '1', name: 'Push Notifications' },
@@ -18,11 +19,11 @@ const SETTINGS = [
   { id: '8', name: 'Profile Visibility' },
   { id: '9', name: 'Data Sync' },
   { id: '10', name: 'Analytics' },
-]
+];
 
 export default function SettingsScreen() {
   const router = useRouter();
-  
+
   const [toggles, setToggles] = useState<Record<string, boolean>>(
     Object.fromEntries(SETTINGS.map((s) => [s.id, false]))
   );
@@ -31,18 +32,25 @@ export default function SettingsScreen() {
     setToggles((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/modal')}>
+        <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>
-        <Image 
-          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')} 
-          style={{ width: 60, height: 60 }} 
+        <Image
+          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+          style={{ width: 60, height: 60 }}
         />
       </ThemedView>
+
       <ThemedText type="title" style={styles.title}>Settings</ThemedText>
+
       <FlatList
         data={SETTINGS}
         keyExtractor={(item) => item.id}
@@ -58,6 +66,11 @@ export default function SettingsScreen() {
             />
           </ThemedView>
         )}
+        ListFooterComponent={
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <ThemedText style={styles.logoutTxt}>Log Out</ThemedText>
+          </TouchableOpacity>
+        }
       />
     </ThemedView>
   );
@@ -96,5 +109,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 12,
     backgroundColor: '#1c1c1e',
+  },
+  logoutBtn: {
+    backgroundColor: '#c62828',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  logoutTxt: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

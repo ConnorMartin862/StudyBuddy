@@ -78,7 +78,7 @@ app.post('/auth/login', async (req, res) => {
 app.get('/users/me', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, email, preferences, schedule FROM users WHERE id = $1',
+      'SELECT id, name, email, preferences, schedule, classes FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json(result.rows[0]);
@@ -112,7 +112,7 @@ app.put('/users/me', requireAuth, async (req, res) => {
 app.get('/users/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, email, preferences, schedule FROM users WHERE id = $1',
+      'SELECT id, name, email, preferences, schedule, classes FROM users WHERE id = $1',
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
