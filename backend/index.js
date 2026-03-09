@@ -99,7 +99,7 @@ app.put('/users/me', requireAuth, async (req, res) => {
         schedule    = COALESCE($3, schedule)
        WHERE id = $4
        RETURNING id, name, email, preferences, schedule`,
-      [name, preferences, schedule, req.user.id]
+      [name, JSON.stringify(preferences), JSON.stringify(schedule), req.user.id]
     );
     res.json(result.rows[0]);
   } catch (err) {

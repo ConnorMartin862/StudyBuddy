@@ -134,13 +134,13 @@ export default function ProfileScreen() {
 
   // Save preferences to backend
   const savePrefs = async (newPrefs: string[]) => {
-    setPrefs(newPrefs);
-    try {
-      await updateMyProfile({ preferences: newPrefs });
-    } catch (e) {
-      console.error('Failed to save prefs', e);
-    }
-  };
+  setPrefs(newPrefs);
+  try {
+    await updateMyProfile({ preferences: newPrefs });
+  } catch (e: any) {
+    console.error('Failed to save prefs:', JSON.stringify(e?.response?.data));
+  }
+};
 
   // Save classes to backend
   const saveClasses = async (newClasses: string[]) => {
