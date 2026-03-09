@@ -3,7 +3,8 @@ import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { AuthProvider } from '@/context/auth';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -18,12 +19,15 @@ export default function RootLayout() {
 
   // Only runs once when app first loads
   useEffect(() => {
-    AsyncStorage.getItem('token').then((token) => {
-      if (!token) {
-        router.replace('/login');
-      }
-    });
+    const checkToken = async () => {
+      const token = Platform.OS === 'web'
+        ? localStorage.getItem('token')
+        : await SecureStore.getItemAsync('token');
+      if (!token) setTimeout(() => router.replace('/login'), 0);
+    };
+    checkToken();
   }, []);
+
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

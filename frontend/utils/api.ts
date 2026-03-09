@@ -1,21 +1,21 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native';
 
-export const BASE_URL = 'http://localhost:3000';
+export const BASE_URL = 'http://35.3.194.78:3000';
 
 // ── Platform-aware storage ────────────────────────────────────────────────────
 const storage = {
   async get(key: string): Promise<string | null> {
     if (Platform.OS === 'web') return localStorage.getItem(key);
-    return AsyncStorage.getItem(key);
+    return SecureStore.getItemAsync(key);  // was AsyncStorage.getItem
   },
   async set(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web') { localStorage.setItem(key, value); return; }
-    await AsyncStorage.setItem(key, value);
+    await SecureStore.setItemAsync(key, value);  // was AsyncStorage.setItem
   },
   async remove(key: string): Promise<void> {
     if (Platform.OS === 'web') { localStorage.removeItem(key); return; }
-    await AsyncStorage.removeItem(key);
+    await SecureStore.deleteItemAsync(key);  // was AsyncStorage.removeItem
   },
 };
 
