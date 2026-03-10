@@ -53,11 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const BASE_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'https://joseph-unneeded-straitly.ngrok-free.dev';
+
   async function login(email: string, password: string) {
-    const res = await fetch('http://35.3.194.78:3000/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Login failed');
@@ -68,10 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function register(name: string, username: string, email: string, password: string) {
-    const res = await fetch('http://35.3.194.78:3000/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, email, password }),
+    const res = await fetch(`${BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username, email, password }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');

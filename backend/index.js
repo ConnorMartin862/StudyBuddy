@@ -90,16 +90,24 @@ app.get('/users/me', requireAuth, async (req, res) => {
 // Update your own profile (name, preferences, schedule)
 // PUT /users/me  { name?, preferences?, schedule? }
 app.put('/users/me', requireAuth, async (req, res) => {
-  const { name, preferences, schedule } = req.body;
+  const { name, preferences, schedule, classes } = req.body;
+  console.log('Updating user:', { name, preferences, schedule, classes });
   try {
     const result = await pool.query(
       `UPDATE users SET
         name        = COALESCE($1, name),
-        preferences = COALESCE($2, preferences),
-        schedule    = COALESCE($3, schedule)
-       WHERE id = $4
-       RETURNING id, name, email, preferences, schedule`,
-      [name, JSON.stringify(preferences), JSON.stringify(schedule), req.user.id]
+        preferences = COALESCE($2::jsonb, preferences),
+        schedule    = COALESCE($3::jsonb, schedule),
+        classes     = COALESCE($4::jsonb, classes)
+       WHERE id = $5
+       RETURNING id, name, email, preferences, schedule, classes`,
+      [
+        name ?? null,
+        preferences != null ? JSON.stringify(preferences) : null,
+        schedule != null ? JSON.stringify(schedule) : null,
+        classes != null ? JSON.stringify(classes) : null,
+        req.user.id
+      ]
     );
     res.json(result.rows[0]);
   } catch (err) {
