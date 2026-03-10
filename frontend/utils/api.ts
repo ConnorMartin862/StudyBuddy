@@ -90,6 +90,10 @@ export async function dropClass(class_id: string) {
   return await request('DELETE', `/enrollments/${class_id}`);
 }
 
+export async function createClass(course_code: string, name: string, description?: string) {
+  return await request('POST', '/classes', { course_code, name, description });
+}
+
 // ── Pushes / Matches ──────────────────────────────────────────────────────────
 export async function pushStudent(toUserId: string) {
   return await request('POST', `/pushes/${toUserId}`);
