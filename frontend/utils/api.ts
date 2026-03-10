@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native';
 
-const BASE_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'https://joseph-unneeded-straitly.ngrok-free.dev';
+export const BASE_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'https://joseph-unneeded-straitly.ngrok-free.dev';
 
 // ── Platform-aware storage ────────────────────────────────────────────────────
 const storage = {
