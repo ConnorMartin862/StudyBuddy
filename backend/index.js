@@ -162,6 +162,21 @@ app.get('/classes/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Create a new class
+// POST /classes  { course_code, name, description }
+app.post('/classes', requireAuth, async (req, res) => {
+  const { course_code, name, description } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO classes (course_code, name, description) VALUES ($1, $2, $3) RETURNING *',
+      [course_code, name, description]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Enroll yourself in a class
 // POST /enrollments  { class_id }
 app.post('/enrollments', requireAuth, async (req, res) => {
