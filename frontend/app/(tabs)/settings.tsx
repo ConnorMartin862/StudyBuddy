@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
-import { logout } from '@/app/student/utils/api';
+import { logout } from '@/utils/api';
 
 const SETTINGS = [
   { id: '1', name: 'Push Notifications' },

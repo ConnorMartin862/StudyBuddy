@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { createClass, getMyProfile, updateMyProfile } from '@/app/student/utils/api';
+import { createClass, getMyProfile, updateMyProfile } from '@/utils/api';
 
 const C = {
   headerBg: '#1565c0',
