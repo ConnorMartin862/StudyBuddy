@@ -15,7 +15,6 @@ app.use(cors());
 app.use(express.json());
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
-// Call this on any route that requires a logged-in user
 function requireAuth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -27,15 +26,13 @@ function requireAuth(req, res, next) {
   }
 }
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({ message: 'StudyBuddy API is running!' });
 });
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
-// Register a new user
-// POST /auth/register  { name, email, password }
 app.post('/auth/register', async (req, res) => {
   const { name, username, email, password } = req.body;
   try {
@@ -52,44 +49,23 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Login
-// POST /auth/login
-
 app.post('/auth/login', async (req, res) => {
-
   const { email, password } = req.body;
-
   try {
-
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-
     const user   = result.rows[0];
-
     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
-
-
-
     const valid = await bcrypt.compare(password, user.password_hash);
-
     if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
-
-
-
     const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
     res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
-
   } catch (err) {
-
     res.status(500).json({ error: err.message });
-
   }
-
 });
+
 // ── User routes ───────────────────────────────────────────────────────────────
 
-// Get your own profile
-// GET /users/me
 app.get('/users/me', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -102,8 +78,6 @@ app.get('/users/me', requireAuth, async (req, res) => {
   }
 });
 
-// Update your own profile (name, preferences, schedule)
-// PUT /users/me  { name?, preferences?, schedule? }
 app.put('/users/me', requireAuth, async (req, res) => {
   const { name, preferences, schedule, classes } = req.body;
   console.log('Updating user:', { name, preferences, schedule, classes });
@@ -130,8 +104,6 @@ app.put('/users/me', requireAuth, async (req, res) => {
   }
 });
 
-// Get another student's profile (limited fields — no password etc.)
-// GET /users/:id
 app.get('/users/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -147,8 +119,6 @@ app.get('/users/:id', requireAuth, async (req, res) => {
 
 // ── Class routes ──────────────────────────────────────────────────────────────
 
-// Get all available classes
-// GET /classes
 app.get('/classes', requireAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM classes ORDER BY course_code');
@@ -158,28 +128,30 @@ app.get('/classes', requireAuth, async (req, res) => {
   }
 });
 
-// Create a new class
-// POST /classes  { course_code, name, description }
-app.post('/classes', requireAuth, async (req, res) => {
-  const { course_code, name, description } = req.body;
+// !! Must be before /classes/:id !!
+app.get('/classes/by-name/:name', requireAuth, async (req, res) => {
   try {
-    const result = await pool.query(
-      'INSERT INTO classes (course_code, name, description) VALUES ($1, $2, $3) RETURNING *',
-      [course_code, name, description]
+    const classResult = await pool.query(
+      `SELECT id FROM classes WHERE course_code = $1 OR name = $1 OR CONCAT(course_code, ' - ', name) = $1`,
+      [req.params.name]
     );
-    res.json(result.rows[0]);
+    if (!classResult.rows[0]) return res.json({ students: [] });
+    const students = await pool.query(
+      `SELECT u.id, u.name, u.email FROM users u
+       JOIN enrollments e ON e.user_id = u.id
+       WHERE e.class_id = $1`,
+      [classResult.rows[0].id]
+    );
+    res.json({ students: students.rows });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Get a single class + its enrolled students
-// GET /classes/:id
 app.get('/classes/:id', requireAuth, async (req, res) => {
   try {
     const classResult = await pool.query('SELECT * FROM classes WHERE id = $1', [req.params.id]);
     if (!classResult.rows[0]) return res.status(404).json({ error: 'Class not found' });
-
     const studentsResult = await pool.query(
       `SELECT u.id, u.name, u.email FROM users u
        JOIN enrollments e ON e.user_id = u.id
@@ -192,30 +164,31 @@ app.get('/classes/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Enroll yourself in a class
-// POST /enrollments  { class_id }
 app.post('/classes', requireAuth, async (req, res) => {
-
   const { course_code, name } = req.body;
-
   try {
-
     const result = await pool.query(
-
       'INSERT INTO classes (course_code, name) VALUES ($1, $2) RETURNING *',
-
       [course_code, name ?? '']
-
     );
-
     res.json(result.rows[0]);
-
   } catch (err) {
-
     res.status(500).json({ error: err.message });
-
   }
+});
 
+// ── Enrollment routes ─────────────────────────────────────────────────────────
+
+app.get('/enrollments/mine', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT class_id FROM enrollments WHERE user_id = $1',
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/enrollments', requireAuth, async (req, res) => {
@@ -231,8 +204,6 @@ app.post('/enrollments', requireAuth, async (req, res) => {
   }
 });
 
-// Drop a class
-// DELETE /enrollments/:classId
 app.delete('/enrollments/:classId', requireAuth, async (req, res) => {
   try {
     await pool.query(
@@ -247,8 +218,6 @@ app.delete('/enrollments/:classId', requireAuth, async (req, res) => {
 
 // ── Push / match routes ───────────────────────────────────────────────────────
 
-// Push (express interest in) another student
-// POST /pushes/:toUserId
 app.post('/pushes/:toUserId', requireAuth, async (req, res) => {
   try {
     await pool.query(
@@ -261,8 +230,6 @@ app.post('/pushes/:toUserId', requireAuth, async (req, res) => {
   }
 });
 
-// Un-push someone
-// DELETE /pushes/:toUserId
 app.delete('/pushes/:toUserId', requireAuth, async (req, res) => {
   try {
     await pool.query(
@@ -275,8 +242,7 @@ app.delete('/pushes/:toUserId', requireAuth, async (req, res) => {
   }
 });
 
-// Get everyone you've pushed
-// GET /pushes/sent
+// !! Must be before /pushes/:toUserId !!
 app.get('/pushes/sent', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -291,8 +257,7 @@ app.get('/pushes/sent', requireAuth, async (req, res) => {
   }
 });
 
-// Get mutual matches (both users pushed each other)
-// GET /pushes/matches
+// !! Must be before /pushes/:toUserId !!
 app.get('/pushes/matches', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(

@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
-import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, BASE_URL } from '@/app/student/utils/api';
+import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, BASE_URL } from '@/utils/api';
 // import { BASE_URL } from '@/utils/api';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
@@ -141,7 +141,7 @@ const createAndAddClass = async () => {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.classCard, { borderLeftColor: item.color }]}
-              onPress={() => router.push({ pathname: '/home/class', params: { id: item.id } })}
+              onPress={() => router.push({ pathname: '/home/class', params: { id: item.id, name: item.name } })}
             >
               <ThemedText type="subtitle" style={{ color: '#ffffff' }}>{item.name}</ThemedText>
               <IconSymbol name="chevron.right" size={20} color="#999" />
@@ -179,7 +179,7 @@ const createAndAddClass = async () => {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={m.classRow}
-                      onPress={() => addClassToProfile(`${item.course_code}${item.name ? ' - ' + item.name : ''}`)}
+                      onPress={() => addClassToProfile(`${item.course_code}${item.name ? ' - ' + item.name : ''}`, item.id)}
                     >
                       <View>
                         <ThemedText style={m.courseCode}>{item.course_code}</ThemedText>
