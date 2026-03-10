@@ -1,44 +1,71 @@
-import { StyleSheet, FlatList, TouchableOpacity, View, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { StyleSheet, TouchableOpacity, View, ScrollView, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { Image } from 'expo-image';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { getMyProfile, getMatches } from '@/utils/api';
+import { BASE_URL } from '@/utils/api';
 
-// Hardcoded class data — replace with API later
-const CLASS_DATA: Record<string, { name: string; color: string }> = {
-  '1': { name: 'CS 101 - Intro to Computer Science', color: '#4A90D9' },
-  '2': { name: 'MATH 201 - Linear Algebra', color: '#E07B53' },
-  '3': { name: 'PHYS 150 - Physics I', color: '#5CB85C' },
-  '4': { name: 'ENG 102 - Academic Writing', color: '#9B59B6' },
-};
-
-// Hardcoded members — matches shown first
-const MEMBERS = [
-  { id: '1', name: 'Alice Johnson', matched: true },
-  { id: '2', name: 'Bob Smith', matched: true },
-  { id: '3', name: 'Charlie Davis', matched: false },
-  { id: '4', name: 'Dana Lee', matched: false },
-  { id: '5', name: 'Eli Brooks', matched: false },
-  { id: '6', name: 'Fiona Clark', matched: false },
-];
-
-// Hardcoded threads
-const THREADS = [
-  { id: '1', title: 'Study group for midterm?', author: 'Alice Johnson', replies: 5 },
-  { id: '2', title: 'Homework 3 question', author: 'Charlie Davis', replies: 2 },
-  { id: '3', title: 'Best resources for this class', author: 'Bob Smith', replies: 8 },
-];
+const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
 
 export default function ClassScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, name, color } = useLocalSearchParams<{ id: string; name: string; color: string }>();
   const router = useRouter();
-  const classInfo = CLASS_DATA[id] || { name: 'Unknown Class', color: '#999' };
 
-  // Sort members so matches appear first
-  const sortedMembers = [...MEMBERS].sort((a, b) => (b.matched ? 1 : 0) - (a.matched ? 1 : 0));
+  const [members,  setMembers]  = useState<{ id: string; name: string; matched: boolean }[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [className, setClassName] = useState(name ?? 'Class');
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMembers();
+    }, [name])
+  );
+
+  const loadMembers = async () => {
+    setLoading(true);
+    try {
+      // Get all users enrolled in classes with this name
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch(`${BASE_URL}/classes/by-name/${encodeURIComponent(name ?? '')}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      // Get current user's matches
+      // const matches = await getMatches();
+      // const matchIds = new Set(matches.map((m: any) => m.id));
+
+      let matchIds = new Set<string>();
+      try {
+        const matches = await getMatches();
+        matchIds = new Set(matches.map((m: any) => m.id));
+      } catch (e) {
+        console.warn('Could not load matches', e);
+      }
+
+      // Get current user's own profile to exclude self
+      const me = await getMyProfile();
+
+      const memberList = (data.students ?? [])
+        .filter((s: any) => s.id !== me.id)
+        .map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          matched: matchIds.has(s.id),
+        }))
+        .sort((a: any, b: any) => (b.matched ? 1 : 0) - (a.matched ? 1 : 0));
+
+      setMembers(memberList);
+    } catch (e) {
+      console.error('Failed to load class members', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -55,47 +82,38 @@ export default function ClassScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Class title */}
-        <ThemedText type="title" style={styles.title}>{classInfo.name}</ThemedText>
+        <ThemedText type="title" style={styles.title}>{name}</ThemedText>
 
         {/* Members section */}
         <ThemedText style={styles.sectionHeader}>Members</ThemedText>
-        {sortedMembers.map((item) => (
-          <View key={item.id} style={styles.memberRow}>
-            <View style={styles.memberInfo}>
-              <View style={[styles.memberAvatar, item.matched && styles.matchedAvatar]}>
-                <ThemedText style={styles.avatarText}>
-                  {item.name.charAt(0)}
-                </ThemedText>
-              </View>
-              <ThemedText style={styles.memberName}>{item.name}</ThemedText>
-            </View>
-            {item.matched && (
-              <View style={styles.matchBadge}>
-                <ThemedText style={styles.matchBadgeText}>Match</ThemedText>
-              </View>
-            )}
-          </View>
-        ))}
 
-        {/* Threads section */}
-        <ThemedText style={styles.sectionHeader}>Threads</ThemedText>
-        {THREADS.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.threadRow}>
-            <View>
-              <ThemedText style={styles.threadTitle}>{item.title}</ThemedText>
-              <ThemedText style={styles.threadMeta}>
-                {item.author} · {item.replies} replies
-              </ThemedText>
-            </View>
-            <IconSymbol name="chevron.right" size={18} color="#999" />
-          </TouchableOpacity>
-        ))}
-
-        <TouchableOpacity style={styles.addThreadButton}>
-          <ThemedText style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
-            + New Thread
-          </ThemedText>
-        </TouchableOpacity>
+        {loading ? (
+          <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />
+        ) : members.length === 0 ? (
+          <ThemedText style={styles.empty}>No other students in this class yet.</ThemedText>
+        ) : (
+          members.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.memberRow}
+              onPress={() => router.push(`/student/${item.id}`)}
+            >
+              <View style={styles.memberInfo}>
+                <View style={[styles.memberAvatar, item.matched && styles.matchedAvatar]}>
+                  <ThemedText style={styles.avatarText}>
+                    {item.name.charAt(0)}
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.memberName}>{item.name}</ThemedText>
+              </View>
+              {item.matched && (
+                <View style={styles.matchBadge}>
+                  <ThemedText style={styles.matchBadgeText}>Match</ThemedText>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </ThemedView>
   );
@@ -134,11 +152,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
-  list: {
-    paddingLeft: 20,
-    paddingRight: 20,
+  empty: {
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
+    marginHorizontal: 20,
   },
-  // Members
   memberRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -177,8 +197,7 @@ const styles = StyleSheet.create({
   },
   matchBadge: {
     backgroundColor: '#32a85e',
-    paddingLeft: 10,
-    paddingRight: 10,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
@@ -186,36 +205,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
-  },
-  // Threads
-  threadRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    marginBottom: 10,
-    marginLeft: 20,
-    marginRight: 20,
-    borderRadius: 12,
-    backgroundColor: '#1c1c1e',
-  },
-  threadTitle: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  threadMeta: {
-    color: '#999',
-    fontSize: 12,
-  },
-  addThreadButton: {
-    backgroundColor: '#32a85e',
-    marginLeft: 20,
-    marginRight: 20,
-    marginTop: 10,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
   },
 });

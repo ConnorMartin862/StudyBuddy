@@ -82,8 +82,13 @@ export async function getClassById(id: string) {
   return await request('GET', `/classes/${id}`);
 }
 
-export async function enrollInClass(class_id: string) {
-  return await request('POST', '/enrollments', { class_id });
+// export async function enrollInClass(classId: string) {
+//   return await request('POST', '/enrollments', { class_id: classId });
+// }
+
+export async function enrollInClass(classId: string) {
+  console.log('enrollInClass called with:', classId);
+  return await request('POST', '/enrollments', { class_id: classId });
 }
 
 export async function dropClass(class_id: string) {
