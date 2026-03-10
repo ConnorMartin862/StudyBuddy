@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { getMyProfile, updateMyProfile } from '@/utils/api';
+import { getMyProfile, updateMyProfile, getAllClasses, dropClass } from '@/utils/api';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
@@ -215,10 +215,19 @@ export default function ProfileScreen() {
   };
 
   const removeClass = async (idx: number) => {
+    const label = classes[idx];
     const next = classes.filter((_, i) => i !== idx);
     setClasses(next);
     try {
       await updateMyProfile({ classes: next });
+      // Find the matching class in the DB and drop enrollment
+      const allClasses = await getAllClasses();
+      const match = allClasses.find((c: any) =>
+        `${c.course_code} - ${c.name}` === label ||
+        c.course_code === label ||
+        c.name === label
+      );
+      if (match) await dropClass(match.id);
     } catch (e) {
       console.error('Failed to remove class', e);
     }
