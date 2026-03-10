@@ -185,15 +185,10 @@ const createAndAddClass = async () => {
                   )}
                 />
 
-                {/* Create new class option */}
-                {search.trim().length > 0 && (
-                  <TouchableOpacity style={m.createRow} onPress={createAndAddClass}>
-                    <ThemedText style={m.createTxt}>
-                      Create "{search.trim()}" and add it
-                    </ThemedText>
-                    <IconSymbol name="plus.circle.fill" size={24} color="#ffa000" />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity style={m.createRow} onPress={() => { setModalVisible(false); router.push('/create_class'); }}>
+                  <ThemedText style={m.createTxt}>Create New Class</ThemedText>
+                  <IconSymbol name="plus.circle.fill" size={24} color="#ffa000" />
+                </TouchableOpacity>
               </>
             )}
 

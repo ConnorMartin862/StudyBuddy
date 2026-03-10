@@ -38,6 +38,7 @@ export default function RootLayout() {
           <Stack.Screen name="profile"      options={{ title: 'Profile', headerBackTitle: 'Home' }} />
           <Stack.Screen name="student/[id]" options={{ title: 'Student Profile', headerBackTitle: 'Matches' }} />
           <Stack.Screen name="login"        options={{ headerShown: false }} />
+          <Stack.Screen name="create_class" options={{ title: 'Create Class', headerBackTitle: 'Home' }} />
         </Stack>
       </AuthProvider>
     </ThemeProvider>

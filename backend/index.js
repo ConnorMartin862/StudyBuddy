@@ -53,20 +53,6 @@ app.post('/auth/register', async (req, res) => {
 });
 
 // Login
-// POST /auth/login  { email, password }
-app.post('/classes', requireAuth, async (req, res) => {
-  const { course_code, name } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO classes (course_code, name) VALUES ($1, $2) RETURNING *',
-      [course_code, name ?? '']
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ── User routes ───────────────────────────────────────────────────────────────
 
 // Get your own profile
@@ -139,6 +125,21 @@ app.get('/classes', requireAuth, async (req, res) => {
   }
 });
 
+// Create a new class
+// POST /classes  { course_code, name, description }
+app.post('/classes', requireAuth, async (req, res) => {
+  const { course_code, name, description } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO classes (course_code, name, description) VALUES ($1, $2, $3) RETURNING *',
+      [course_code, name, description]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Get a single class + its enrolled students
 // GET /classes/:id
 app.get('/classes/:id', requireAuth, async (req, res) => {
@@ -155,21 +156,6 @@ app.get('/classes/:id', requireAuth, async (req, res) => {
     res.json({ ...classResult.rows[0], students: studentsResult.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-// Create a new class
-// POST /classes  { course_code, name, description }
-app.post('/classes', requireAuth, async (req, res) => {
-  const { course_code, name, description } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO classes (course_code, name, description) VALUES ($1, $2, $3) RETURNING *',
-      [course_code, name, description]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
   }
 });
 
