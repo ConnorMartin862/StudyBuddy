@@ -1,26 +1,27 @@
-import { StyleSheet, FlatList, TouchableOpacity, Modal, View, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useCallback } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { StyleSheet, FlatList, TouchableOpacity, Modal, View, ActivityIndicator, TextInput } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback, useMemo } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
-import { getMyProfile, getAllClasses, updateMyProfile } from '@/utils/api';
+import { getMyProfile, getAllClasses, updateMyProfile, createClass, BASE_URL } from '@/utils/api';
+// import { BASE_URL } from '@/utils/api';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
 
 export default function HomeScreen() {
   const router = useRouter();
 
-  const [myClasses,     setMyClasses]     = useState<{ id: string; name: string; color: string }[]>([]);
-  const [allClasses,    setAllClasses]    = useState<{ id: string; course_code: string; name: string }[]>([]);
-  const [modalVisible,  setModalVisible]  = useState(false);
-  const [loading,       setLoading]       = useState(true);
-  const [adding,        setAdding]        = useState(false);
+  const [myClasses,    setMyClasses]    = useState<{ id: string; name: string; color: string }[]>([]);
+  const [allClasses,   setAllClasses]   = useState<{ id: string; course_code: string; name: string }[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [search,       setSearch]       = useState('');
+  const [loading,      setLoading]      = useState(true);
+  const [adding,       setAdding]       = useState(false);
+  const [creating,     setCreating]     = useState(false);
 
-  // Load user's enrolled classes whenever screen is focused
   useFocusEffect(
     useCallback(() => {
       loadMyClasses();
@@ -46,18 +47,25 @@ export default function HomeScreen() {
 
   const openAddModal = async () => {
     setModalVisible(true);
+    setSearch('');
     try {
       const classes = await getAllClasses();
-      console.log('classes:', JSON.stringify(classes));
       setAllClasses(classes);
-    } catch (e: any) {
-      console.error('Failed to load classes:', JSON.stringify(e?.response?.data));
+    } catch (e) {
+      console.error('Failed to load available classes', e);
     }
   };
 
-  const addClassToProfile = async (cls: { course_code: string; name: string }) => {
-    const label = `${cls.course_code} - ${cls.name}`;
-    // Don't add duplicates
+  // Filter classes by search query
+  const filtered = useMemo(() => {
+    if (!search.trim()) return allClasses;
+    const q = search.toLowerCase();
+    return allClasses.filter(
+      c => c.course_code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+    );
+  }, [search, allClasses]);
+
+  const addClassToProfile = async (label: string) => {
     if (myClasses.find(c => c.name === label)) {
       setModalVisible(false);
       return;
@@ -70,12 +78,30 @@ export default function HomeScreen() {
       await updateMyProfile({ classes: updated });
       await loadMyClasses();
       setModalVisible(false);
+      setSearch('');
     } catch (e) {
       console.error('Failed to add class', e);
     } finally {
       setAdding(false);
     }
   };
+
+  // Create a brand new class in the database, then add to profile
+const createAndAddClass = async () => {
+  console.log('createAndAddClass called', search.trim());
+  if (!search.trim()) return;
+  setCreating(true);
+  try {
+    await createClass(search.trim(), '');
+    const classes = await getAllClasses();
+    setAllClasses(classes);
+    await addClassToProfile(search.trim());
+  } catch (e) {
+    console.error('Failed to create class', e);
+  } finally {
+    setCreating(false);
+  }
+};
 
   return (
     <ThemedView style={styles.container}>
@@ -106,7 +132,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
               <ThemedText style={{ color: '#ffffff', fontSize: 28 }}>+</ThemedText>
             </TouchableOpacity>
-  }
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.classCard, { borderLeftColor: item.color }]}
@@ -119,36 +145,59 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-        <ThemedText style={{ color: '#ffffff', fontSize: 28 }}>+</ThemedText>
-      </TouchableOpacity> */}
-
       {/* Add class modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={m.overlay}>
           <View style={m.sheet}>
             <ThemedText type="title" style={m.title}>Add a Class</ThemedText>
-            {adding ? (
+
+            {/* Search bar */}
+            <TextInput
+              style={m.search}
+              placeholder="Search or type a new class..."
+              placeholderTextColor="#888"
+              value={search}
+              onChangeText={setSearch}
+              autoFocus
+            />
+
+            {adding || creating ? (
               <ActivityIndicator color="#2e7d32" style={{ marginVertical: 20 }} />
             ) : (
-              <FlatList
-                data={allClasses}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={m.classRow}
-                    onPress={() => addClassToProfile(item)}
-                  >
-                    <View>
-                      <ThemedText style={m.courseCode}>{item.course_code}</ThemedText>
-                      <ThemedText style={m.courseName}>{item.name}</ThemedText>
-                    </View>
-                    <IconSymbol name="plus.circle.fill" size={24} color="#2e7d32" />
+              <>
+                <FlatList
+                  data={filtered}
+                  keyExtractor={(item) => item.id}
+                  style={{ maxHeight: 300 }}
+                  keyboardShouldPersistTaps="handled"
+                  ListEmptyComponent={null}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={m.classRow}
+                      onPress={() => addClassToProfile(`${item.course_code}${item.name ? ' - ' + item.name : ''}`)}
+                    >
+                      <View>
+                        <ThemedText style={m.courseCode}>{item.course_code}</ThemedText>
+                        {item.name ? <ThemedText style={m.courseName}>{item.name}</ThemedText> : null}
+                      </View>
+                      <IconSymbol name="plus.circle.fill" size={24} color="#2e7d32" />
+                    </TouchableOpacity>
+                  )}
+                />
+
+                {/* Create new class option */}
+                {search.trim().length > 0 && (
+                  <TouchableOpacity style={m.createRow} onPress={createAndAddClass}>
+                    <ThemedText style={m.createTxt}>
+                      Create "{search.trim()}" and add it
+                    </ThemedText>
+                    <IconSymbol name="plus.circle.fill" size={24} color="#ffa000" />
                   </TouchableOpacity>
                 )}
-              />
+              </>
             )}
-            <TouchableOpacity style={m.cancelBtn} onPress={() => setModalVisible(false)}>
+
+            <TouchableOpacity style={m.cancelBtn} onPress={() => { setModalVisible(false); setSearch(''); }}>
               <ThemedText style={m.cancelTxt}>Cancel</ThemedText>
             </TouchableOpacity>
           </View>
@@ -220,12 +269,20 @@ const m = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '70%',
+    maxHeight: '80%',
   },
   title: {
     color: '#ffffff',
-    marginBottom: 16,
+    marginBottom: 12,
     textAlign: 'center',
+  },
+  search: {
+    backgroundColor: '#2a2a2e',
+    borderRadius: 10,
+    padding: 12,
+    color: '#ffffff',
+    fontSize: 15,
+    marginBottom: 12,
   },
   classRow: {
     flexDirection: 'row',
@@ -244,6 +301,20 @@ const m = StyleSheet.create({
     color: '#aaaaaa',
     fontSize: 13,
     marginTop: 2,
+  },
+  createRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a2e',
+    marginTop: 8,
+  },
+  createTxt: {
+    color: '#ffa000',
+    fontSize: 15,
+    fontWeight: '600',
   },
   cancelBtn: {
     marginTop: 16,
