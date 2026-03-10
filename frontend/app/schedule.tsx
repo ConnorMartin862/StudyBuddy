@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { getMyProfile, updateMyProfile } from '@/utils/api';
+import { getMyProfile, updateMyProfile } from '@/app/student/utils/api';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 

@@ -6,8 +6,8 @@ import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getMyProfile, getMatches } from '@/utils/api';
-import { BASE_URL } from '@/utils/api';
+import { getMyProfile, getMatches } from '@/app/student/utils/api';
+import { BASE_URL } from '@/app/student/utils/api';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
 

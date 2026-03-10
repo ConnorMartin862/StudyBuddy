@@ -115,3 +115,28 @@ export async function getSentPushes() {
 export async function getMatches() {
   return await request('GET', '/pushes/matches');
 }
+
+export async function syncEnrollments() {
+  try {
+    const [profile, allClasses] = await Promise.all([getMyProfile(), getAllClasses()]);
+    const myClassNames: string[] = profile.classes ?? [];
+    
+    // Get current enrollments
+    const enrolled = await request('GET', '/enrollments/mine');
+    const enrolledIds = new Set(enrolled.map((e: any) => e.class_id));
+
+    // For each class in profile, enroll if not already enrolled
+    for (const className of myClassNames) {
+      const match = allClasses.find((c: any) =>
+        `${c.course_code} - ${c.name}` === className ||
+        c.course_code === className ||
+        c.name === className
+      );
+      if (match && !enrolledIds.has(match.id)) {
+        await enrollInClass(match.id);
+      }
+    }
+  } catch (e) {
+    console.warn('syncEnrollments failed', e);
+  }
+}

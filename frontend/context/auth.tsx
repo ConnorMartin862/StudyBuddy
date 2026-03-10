@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { syncEnrollments } from '@/utils/api';
 
 async function saveItem(key: string, value: string) {
   if (Platform.OS === 'web') {
@@ -67,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveItem('user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    await syncEnrollments(); // Sync enrollments after login
   }
 
   async function register(name: string, username: string, email: string, password: string) {
@@ -81,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveItem('user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    await syncEnrollments();
   }
 
   async function logout() {
