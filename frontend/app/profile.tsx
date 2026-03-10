@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useWindowDimensions } from 'react-native';
 import {
   View,
   Text,
@@ -11,8 +12,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { getMyProfile, updateMyProfile } from '@/utils/api';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+
+const router = useRouter();
 
 const C = {
   headerBg: '#1565c0',
@@ -30,46 +35,60 @@ const C = {
 };
 
 const DAYS  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
-const CELL_H = 44;
+type Block = { day: number; hour: number; color: 'red' | 'green' };
 
-type Block = { day: number; startHour: number; endHour: number; label: string; color: string };
+const ALL_HOURS = Array.from({ length: 24 }, (_, i) => i);
+const TRIM_HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
 
-function ScheduleGrid({ blocks }: { blocks: Block[] }) {
+function ScheduleGrid({ blocks, trimmed }: { blocks: Block[], trimmed: boolean }) {
+  const hours = trimmed ? TRIM_HOURS : ALL_HOURS;
+  const { width } = useWindowDimensions();
+  
   return (
-    <View style={sg.wrapper}>
-      <View style={sg.headerRow}>
-        <View style={sg.timeCol} />
-        {DAYS.map(d => (
-          <View key={d} style={sg.dayCol}>
-            <Text style={sg.dayLabel}>{d}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={{ width: width}}>
+        <View style={sg.wrapper}>
+          <View style={sg.headerRow}>
+            <View style={sg.timeCol} />
+            {DAYS.map(d => (
+              <View key={d} style={sg.dayCol}>
+                <Text style={sg.dayLabel}>{d}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-      <View style={sg.body}>
-        <View style={sg.timeCol}>
-          {HOURS.map(h => (
-            <View key={h} style={sg.hourCell}>
-              <Text style={sg.hourLabel}>{h <= 12 ? `${h}a` : `${h - 12}p`}</Text>
-            </View>
-          ))}
-        </View>
-        {DAYS.map((d, di) => (
-          <View key={d} style={sg.dayCol}>
-            {HOURS.map(h => <View key={h} style={sg.gridCell} />)}
-            {blocks.filter(b => b.day === di).map((b, i) => {
-              const top    = (b.startHour - 8) * CELL_H;
-              const height = (b.endHour - b.startHour) * CELL_H - 2;
-              return (
-                <View key={i} style={[sg.block, { top, height, backgroundColor: b.color }]}>
-                  <Text style={sg.blockText} numberOfLines={2}>{b.label}</Text>
+          <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+            <View style={sg.body}>
+              <View style={sg.timeCol}>
+                {hours.map(h => (
+                  <View key={h} style={sg.hourCell}>
+                    <Text style={sg.hourLabel}>
+                      {h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {DAYS.map((d, di) => (
+                <View key={d} style={sg.dayCol}>
+                  {hours.map(h => {
+                    const block = blocks.find(b => b.day === di && b.hour === h);
+                    return (
+                      <View
+                        key={h}
+                        style={[
+                          sg.gridCell,
+                          block?.color === 'red'   && { backgroundColor: '#ffcdd2' },
+                          block?.color === 'green' && { backgroundColor: '#c8e6c9' },
+                        ]}
+                      />
+                    );
+                  })}
                 </View>
-              );
-            })}
-          </View>
-        ))}
+              ))}
+            </View>
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -80,14 +99,9 @@ const sg = StyleSheet.create({
   dayCol:    { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
   dayLabel:  { color: C.white, fontSize: 10, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
   body:      { flexDirection: 'row', backgroundColor: C.card },
-  hourCell:  { height: CELL_H, justifyContent: 'flex-start', alignItems: 'flex-end', paddingRight: 2 },
-  hourLabel: { fontSize: 8, color: C.textSec },
-  gridCell:  { height: CELL_H, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  block: {
-    position: 'absolute', left: 1, right: 1,
-    borderRadius: 4, paddingHorizontal: 2, paddingTop: 2, zIndex: 10,
-  },
-  blockText: { color: C.white, fontSize: 8, fontWeight: '700' },
+  hourCell:  { height: 20, justifyContent: 'center', alignItems: 'flex-end', paddingRight: 2 },
+  hourLabel: { fontSize: 7, color: C.textSec },
+  gridCell:  { height: 20, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
 });
 
 export default function ProfileScreen() {
@@ -97,6 +111,8 @@ export default function ProfileScreen() {
   const [prefs,   setPrefs]     = useState<string[]>([]);
   const [classes, setClasses]   = useState<string[]>([]);
   const [blocks,  setBlocks]    = useState<Block[]>([]);
+  const [trimmed, setTrimmed] = useState(false);
+
 
   // Edit preference modal
   const [editPrefVisible, setEditPrefVisible] = useState(false);
@@ -115,22 +131,26 @@ export default function ProfileScreen() {
   );
 
   const loadProfile = async () => {
-  console.log('loadProfile called');
-  setLoading(true);
-  try {
-    const data = await getMyProfile();
-    console.log('Profile data:', JSON.stringify(data));
-    setName(data.name ?? '');
-    setEmail(data.email ?? '');
-    setPrefs(data.preferences ?? []);
-    setClasses(data.classes ?? []);
-    setBlocks(data.schedule ?? []);
-  } catch (e: any) {
-    console.error('Failed to load profile:', e.message, JSON.stringify(e));
-  } finally {
-    setLoading(false);
-  }
-};
+    console.log('loadProfile called');
+    setLoading(true);
+    try {
+      const data = await getMyProfile();
+      console.log('Profile data:', JSON.stringify(data));
+      setName(data.name ?? '');
+      setEmail(data.email ?? '');
+      setPrefs(data.preferences ?? []);
+      setClasses(data.classes ?? []);
+      setBlocks(data.schedule ?? []);
+      const t = Platform.OS === 'web'
+        ? localStorage.getItem('scheduleTrim')
+        : await SecureStore.getItemAsync('scheduleTrim');
+      setTrimmed(t === 'true');
+    } catch (e: any) {
+      console.error('Failed to load profile:', e.message, JSON.stringify(e));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Save preferences to backend
   const savePrefs = async (newPrefs: string[]) => {
@@ -160,6 +180,10 @@ export default function ProfileScreen() {
 
   const savePref = async () => {
     if (editingPrefIdx === null) return;
+    if (!prefDraft.trim()) {
+    setEditPrefVisible(false);
+      return;
+    }
     const next = [...prefs];
     next[editingPrefIdx] = prefDraft;
     await savePrefs(next);
@@ -167,9 +191,7 @@ export default function ProfileScreen() {
   };
 
   const addPref = () => {
-    const newPrefs = [...prefs, ''];
-    setPrefs(newPrefs);
-    setEditingPrefIdx(newPrefs.length - 1);
+    setEditingPrefIdx(prefs.length);
     setPrefDraft('');
     setEditPrefVisible(true);
   };
@@ -250,16 +272,16 @@ export default function ProfileScreen() {
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Schedule</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/schedule')}
+              style={s.addBtn}
+            >
+              <Ionicons name="pencil" size={14} color={C.white} />
+            </TouchableOpacity>
           </View>
           {blocks.length === 0
-            ? <Text style={s.emptyTxt}>No schedule added yet.</Text>
-            : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ width: 340 }}>
-                  <ScheduleGrid blocks={blocks} />
-                </View>
-              </ScrollView>
-            )
+            ? <Text style={s.emptyTxt}>No schedule yet — tap the edit button to add one.</Text>
+            : <ScheduleGrid blocks={blocks} trimmed={trimmed} />
           }
         </View>
 

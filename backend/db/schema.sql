@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   preferences JSONB,
   schedule JSONB,
+  classes JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
