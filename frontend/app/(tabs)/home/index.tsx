@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
-import { getMyProfile, getAllClasses, updateMyProfile, createClass, BASE_URL } from '@/utils/api';
+import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, BASE_URL } from '@/utils/api';
 // import { BASE_URL } from '@/utils/api';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
@@ -65,7 +65,7 @@ export default function HomeScreen() {
     );
   }, [search, allClasses]);
 
-  const addClassToProfile = async (label: string) => {
+  const addClassToProfile = async (label: string, classId?: string) => {
     if (myClasses.find(c => c.name === label)) {
       setModalVisible(false);
       return;
@@ -76,6 +76,11 @@ export default function HomeScreen() {
       const current = profile.classes ?? [];
       const updated = [...current, label];
       await updateMyProfile({ classes: updated });
+      if (classId) {
+
+        await enrollInClass(classId);
+
+      }
       await loadMyClasses();
       setModalVisible(false);
       setSearch('');
@@ -92,10 +97,10 @@ const createAndAddClass = async () => {
   if (!search.trim()) return;
   setCreating(true);
   try {
-    await createClass(search.trim(), '');
+    const newClass = await createClass(search.trim(), '');
     const classes = await getAllClasses();
     setAllClasses(classes);
-    await addClassToProfile(search.trim());
+     await addClassToProfile(search.trim(), newClass.id);
   } catch (e) {
     console.error('Failed to create class', e);
   } finally {
