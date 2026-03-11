@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useWindowDimensions } from 'react-native';
 import {
   View,
   Text,
@@ -72,45 +73,48 @@ function formatHour(hour: number) {
 
 function ScheduleGrid({ blocks }: { blocks: ScheduleCell[] }) {
   const cellMap = new Map(blocks.map((b) => [`${b.day}-${b.hour}`, b.color]));
+  const { width } = useWindowDimensions();
 
   return (
-    <View style={sg.wrapper}>
-      <View style={sg.headerRow}>
-        <View style={sg.timeCol} />
-        {DAYS.map((d) => (
-          <View key={d} style={sg.dayCol}>
-            <Text style={sg.dayLabel}>{d}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={sg.body}>
-        <View style={sg.timeCol}>
-          {HOURS.map((h) => (
-            <View key={h} style={sg.hourCell}>
-              <Text style={sg.hourLabel}>{formatHour(h)}</Text>
+    <View style={{ width: width}}>
+      <View style={sg.wrapper}>
+        <View style={sg.headerRow}>
+          <View style={sg.timeCol} />
+          {DAYS.map((d) => (
+            <View key={d} style={sg.dayCol}>
+              <Text style={sg.dayLabel}>{d}</Text>
             </View>
           ))}
         </View>
 
-        {DAYS.map((d, di) => (
-          <View key={d} style={sg.dayCol}>
-            {HOURS.map((h) => {
-              const color = cellMap.get(`${di}-${h}`);
-
-              return (
-                <View
-                  key={h}
-                  style={[
-                    sg.gridCell,
-                    color === 'red' && { backgroundColor: C.red },
-                    color === 'green' && { backgroundColor: C.green },
-                  ]}
-                />
-              );
-            })}
+        <View style={sg.body}>
+          <View style={sg.timeCol}>
+            {HOURS.map((h) => (
+              <View key={h} style={sg.hourCell}>
+                <Text style={sg.hourLabel}>{formatHour(h)}</Text>
+              </View>
+            ))}
           </View>
-        ))}
+
+          {DAYS.map((d, di) => (
+            <View key={d} style={sg.dayCol}>
+              {HOURS.map((h) => {
+                const color = cellMap.get(`${di}-${h}`);
+
+                return (
+                  <View
+                    key={h}
+                    style={[
+                      sg.gridCell,
+                      color === 'red' && { backgroundColor: C.red },
+                      color === 'green' && { backgroundColor: C.green },
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
