@@ -7,27 +7,26 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/auth';
-import { TouchableOpacity } from 'react-native';
 import { getPushStatus, pushStudent, unpushStudent } from '@/utils/api';
 
 // ── Colour tokens ────────────────────────────────────────────────────────────
 const C = {
   headerBg: '#1565c0',
-  accent:   '#2e7d32',
+  accent: '#2e7d32',
   accentLt: '#43a047',
-  white:    '#ffffff',
-  bg:       '#4466c9',
-  card:     '#1c1c1e',
-  border:   '#2a2a2e',
-  textPri:  '#ffffff',
-  textSec:  '#aaaaaa',
-  red:      '#e53935',
-  amber:    '#ffa000',
-  green:    '#43a047',
+  white: '#ffffff',
+  bg: '#4466c9',
+  card: '#1c1c1e',
+  border: '#2a2a2e',
+  textPri: '#ffffff',
+  textSec: '#aaaaaa',
+  red: '#e53935',
+  amber: '#ffa000',
+  green: '#43a047',
 };
 
 const BASE_URL =
@@ -35,11 +34,9 @@ const BASE_URL =
     ? 'http://localhost:3000'
     : 'https://joseph-unneeded-straitly.ngrok-free.dev';
 
-type ScheduleBlock = {
+type ScheduleCell = {
   day: number;
-  startHour: number;
-  endHour: number;
-  label: string;
+  hour: number;
   color: string;
 };
 
@@ -49,7 +46,7 @@ type Student = {
   email: string;
   preferences?: string[];
   classes?: string[];
-  schedule?: ScheduleBlock[];
+  schedule?: ScheduleCell[];
 };
 
 const FALLBACK: Student = {
@@ -63,58 +60,57 @@ const FALLBACK: Student = {
 
 // ── Schedule grid ────────────────────────────────────────────────────────────
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
-const CELL_H = 44;
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const CELL_H = 28;
 
-function ScheduleGrid({ blocks }: { blocks: ScheduleBlock[] }) {
-  const { width } = useWindowDimensions();
+function formatHour(hour: number) {
+  if (hour === 0) return '12a';
+  if (hour < 12) return `${hour}a`;
+  if (hour === 12) return '12p';
+  return `${hour - 12}p`;
+}
+
+function ScheduleGrid({ blocks }: { blocks: ScheduleCell[] }) {
+  const cellMap = new Map(blocks.map((b) => [`${b.day}-${b.hour}`, b.color]));
+
   return (
-    <View style={{width : width}}>
-      <View style={sg.wrapper}>
-        <View style={sg.headerRow}>
-          <View style={sg.timeCol} />
-          {DAYS.map((d) => (
-            <View key={d} style={sg.dayCol}>
-              <Text style={sg.dayLabel}>{d}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={sg.body}>
-          <View style={sg.timeCol}>
-            {HOURS.map((h) => (
-              <View key={h} style={sg.hourCell}>
-                <Text style={sg.hourLabel}>{h <= 12 ? `${h}a` : `${h - 12}p`}</Text>
-              </View>
-            ))}
+    <View style={sg.wrapper}>
+      <View style={sg.headerRow}>
+        <View style={sg.timeCol} />
+        {DAYS.map((d) => (
+          <View key={d} style={sg.dayCol}>
+            <Text style={sg.dayLabel}>{d}</Text>
           </View>
+        ))}
+      </View>
 
-          {DAYS.map((d, di) => (
-            <View key={d} style={sg.dayCol}>
-              {HOURS.map((h) => (
-                <View key={h} style={sg.gridCell} />
-              ))}
-
-              {blocks
-                .filter((b) => b.day === di)
-                .map((b, i) => {
-                  const top = (b.startHour - 8) * CELL_H;
-                  const height = (b.endHour - b.startHour) * CELL_H - 2;
-
-                  return (
-                    <View
-                      key={i}
-                      style={[sg.block, { top, height, backgroundColor: b.color || C.accentLt }]}
-                    >
-                      <Text style={sg.blockText} numberOfLines={2}>
-                        {b.label}
-                      </Text>
-                    </View>
-                  );
-                })}
+      <View style={sg.body}>
+        <View style={sg.timeCol}>
+          {HOURS.map((h) => (
+            <View key={h} style={sg.hourCell}>
+              <Text style={sg.hourLabel}>{formatHour(h)}</Text>
             </View>
           ))}
         </View>
+
+        {DAYS.map((d, di) => (
+          <View key={d} style={sg.dayCol}>
+            {HOURS.map((h) => {
+              const color = cellMap.get(`${di}-${h}`);
+
+              return (
+                <View
+                  key={h}
+                  style={[
+                    sg.gridCell,
+                    color === 'red' && { backgroundColor: C.red },
+                    color === 'green' && { backgroundColor: C.green },
+                  ]}
+                />
+              );
+            })}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -132,20 +128,20 @@ export default function StudentProfileScreen() {
 
   const handlePush = async () => {
     setPushLoading(true);
-      try {
-        if (pushStatus === 'unmatched') {
-          await pushStudent(id);
-          setPushStatus('pushed');
-        } else if (pushStatus === 'pushed') {
-          await unpushStudent(id);
-          setPushStatus('unmatched');
-        }
-      } catch (e) {
-        console.error('Failed to push', e);
-      } finally {
-        setPushLoading(false);
+    try {
+      if (pushStatus === 'unmatched') {
+        await pushStudent(id);
+        setPushStatus('pushed');
+      } else if (pushStatus === 'pushed') {
+        await unpushStudent(id);
+        setPushStatus('unmatched');
       }
-    };
+    } catch (e) {
+      console.error('Failed to push', e);
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchStudent() {
@@ -180,6 +176,7 @@ export default function StudentProfileScreen() {
           classes: Array.isArray(data.classes) ? data.classes : [],
           schedule: Array.isArray(data.schedule) ? data.schedule : [],
         });
+
         const statusRes = await getPushStatus(id);
         setPushStatus(statusRes.status);
       } catch (err: any) {
@@ -190,7 +187,6 @@ export default function StudentProfileScreen() {
       }
     }
 
-    
     fetchStudent();
   }, [id, token]);
 
@@ -228,7 +224,8 @@ export default function StudentProfileScreen() {
         </View>
         <Text style={s.name}>{currentStudent.name}</Text>
         <Text style={s.email}>{currentStudent.email}</Text>
-                {pushLoading ? (
+
+        {pushLoading ? (
           <ActivityIndicator color={C.white} style={{ marginTop: 12 }} />
         ) : pushStatus === 'matched' ? (
           <View style={s.matchedBtn}>
@@ -268,10 +265,8 @@ export default function StudentProfileScreen() {
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Schedule</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: 10 }}>
-            <View style={{ width: 340 }}>
-              <ScheduleGrid blocks={blocks} />
-            </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 10 }}>
+            <ScheduleGrid blocks={blocks} />
           </ScrollView>
         </View>
 
@@ -297,25 +292,56 @@ export default function StudentProfileScreen() {
 }
 
 const sg = StyleSheet.create({
-  wrapper: { borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#333' },
-  headerRow: { flexDirection: 'row', backgroundColor: C.headerBg },
-  timeCol: { width: 32 },
-  dayCol: { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
-  dayLabel: { color: C.white, fontSize: 10, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
-  body: { flexDirection: 'row', backgroundColor: '#1c1c1e' },
-  hourCell: { height: CELL_H, justifyContent: 'flex-start', alignItems: 'flex-end', paddingRight: 2 },
-  hourLabel: { fontSize: 8, color: C.textSec },
-  gridCell: { height: CELL_H, borderBottomWidth: 1, borderBottomColor: '#2a2a2e' },
-  block: {
-    position: 'absolute',
-    left: 1,
-    right: 1,
-    borderRadius: 4,
-    paddingHorizontal: 2,
-    paddingTop: 2,
-    zIndex: 10,
+  wrapper: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333',
+    minWidth: 340,
   },
-  blockText: { color: C.white, fontSize: 8, fontWeight: '700' },
+  headerRow: {
+    flexDirection: 'row',
+    backgroundColor: C.headerBg,
+  },
+  timeCol: {
+    width: 40,
+  },
+  dayCol: {
+    flex: 1,
+    minWidth: 42,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255,255,255,0.2)',
+  },
+  dayLabel: {
+    color: C.white,
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  body: {
+    flexDirection: 'row',
+    backgroundColor: '#1c1c1e',
+  },
+  hourCell: {
+    height: CELL_H,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingRight: 4,
+    paddingTop: 2,
+  },
+  hourLabel: {
+    fontSize: 8,
+    color: C.textSec,
+  },
+  gridCell: {
+    height: CELL_H,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2e',
+    borderRightWidth: 1,
+    borderRightColor: '#2a2a2e',
+    backgroundColor: '#1c1c1e',
+  },
 });
 
 const s = StyleSheet.create({
@@ -432,7 +458,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
   },
   matchBtnTxt: { color: C.white, fontWeight: '700', fontSize: 15 },
-  matchedTxt:  { color: C.white, fontWeight: '700', fontSize: 15 },
+  matchedTxt: { color: C.white, fontWeight: '700', fontSize: 15 },
   chipText: { color: C.accentLt, fontSize: 13, fontWeight: '600' },
 
   empty: { color: C.textSec, padding: 14, fontSize: 13 },
