@@ -35,10 +35,12 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)"       options={{ headerShown: false }} />
           <Stack.Screen name="modal"        options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="profile"      options={{ title: 'Profile', headerBackTitle: 'Home' }} />
+          <Stack.Screen name="profile" options={{ headerShown: false }} />
           <Stack.Screen name="student/[id]" options={{ title: 'Student Profile', headerBackTitle: 'Matches' }} />
           <Stack.Screen name="login"        options={{ headerShown: false }} />
           <Stack.Screen name="create_class" options={{ title: 'Create Class', headerBackTitle: 'Home' }} />
+          <Stack.Screen name="thread/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="thread/new" options={{ headerShown: false }} />
         </Stack>
       </AuthProvider>
     </ThemeProvider>

@@ -99,6 +99,10 @@ export async function createClass(course_code: string, name: string, description
   return await request('POST', '/classes', { course_code, name, description });
 }
 
+export async function getEnrolledClasses() {
+  return await request('GET', '/enrollments/me');
+}
+
 // ── Pushes / Matches ──────────────────────────────────────────────────────────
 export async function pushStudent(toUserId: string) {
   return await request('POST', `/pushes/${toUserId}`);
@@ -122,6 +126,40 @@ export async function getPushStatus(userId: string) {
 
 export async function getReceivedPushes() {
   return await request('GET', '/pushes/received');
+}
+
+// ── Threads ──────────────────────────────────────────────────────────
+
+export async function getThreads(classId: string) {
+  return await request('GET', `/classes/${classId}/threads`);
+}
+
+export async function createThread(classId: string, title: string, body?: string) {
+  return await request('POST', `/classes/${classId}/threads`, { title, body });
+}
+
+export async function getThread(threadId: string) {
+  return await request('GET', `/threads/${threadId}`);
+}
+
+export async function createComment(threadId: string, body: string) {
+  return await request('POST', `/threads/${threadId}/comments`, { body });
+}
+
+export async function slapThread(threadId: string) {
+  return await request('POST', `/threads/${threadId}/slap`);
+}
+
+export async function unslapThread(threadId: string) {
+  return await request('DELETE', `/threads/${threadId}/slap`);
+}
+
+export async function slapComment(commentId: string) {
+  return await request('POST', `/comments/${commentId}/slap`);
+}
+
+export async function unslapComment(commentId: string) {
+  return await request('DELETE', `/comments/${commentId}/slap`);
 }
 
 export async function syncEnrollments() {

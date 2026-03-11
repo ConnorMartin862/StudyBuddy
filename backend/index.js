@@ -204,6 +204,23 @@ app.post('/enrollments', requireAuth, async (req, res) => {
   }
 });
 
+// Get your enrolled classes
+// GET /enrollments/me
+app.get('/enrollments/me', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.* FROM classes c
+       JOIN enrollments e ON e.class_id = c.id
+       WHERE e.user_id = $1
+       ORDER BY c.course_code`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/enrollments/:classId', requireAuth, async (req, res) => {
   try {
     await pool.query(
@@ -312,6 +329,156 @@ app.get('/pushes/matches', requireAuth, async (req, res) => {
       [req.user.id]
     );
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Thread routes ─────────────────────────────────────────────────────────────
+
+// Get threads for a class (with top comment + slap count)
+// GET /classes/:id/threads
+app.get('/classes/:id/threads', requireAuth, async (req, res) => {
+  try {
+    const threads = await pool.query(
+      `SELECT t.*, u.name as author_name,
+        COUNT(DISTINCT s.id) as slap_count,
+        (SELECT body FROM comments WHERE thread_id = t.id ORDER BY created_at ASC LIMIT 1) as top_comment,
+        (SELECT name FROM users WHERE id = (SELECT user_id FROM comments WHERE thread_id = t.id ORDER BY created_at ASC LIMIT 1)) as top_comment_author,
+        (SELECT COUNT(*) FROM comments WHERE thread_id = t.id) as comment_count
+       FROM threads t
+       JOIN users u ON u.id = t.user_id
+       LEFT JOIN slaps s ON s.thread_id = t.id
+       WHERE t.class_id = $1
+       GROUP BY t.id, u.name
+       ORDER BY t.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(threads.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a thread
+// POST /classes/:id/threads  { title, body }
+app.post('/classes/:id/threads', requireAuth, async (req, res) => {
+  const { title, body } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO threads (class_id, user_id, title, body)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.params.id, req.user.id, title, body]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a single thread + all comments
+// GET /threads/:id
+app.get('/threads/:id', requireAuth, async (req, res) => {
+  try {
+    const thread = await pool.query(
+      `SELECT t.*, u.name as author_name,
+        COUNT(DISTINCT s.id) as slap_count,
+        EXISTS(SELECT 1 FROM slaps WHERE thread_id = t.id AND user_id = $2) as slapped
+       FROM threads t
+       JOIN users u ON u.id = t.user_id
+       LEFT JOIN slaps s ON s.thread_id = t.id
+       WHERE t.id = $1
+       GROUP BY t.id, u.name`,
+      [req.params.id, req.user.id]
+    );
+    if (!thread.rows[0]) return res.status(404).json({ error: 'Thread not found' });
+
+    const comments = await pool.query(
+      `SELECT c.*, u.name as author_name,
+        COUNT(DISTINCT s.id) as slap_count,
+        EXISTS(SELECT 1 FROM slaps WHERE comment_id = c.id AND user_id = $2) as slapped
+       FROM comments c
+       JOIN users u ON u.id = c.user_id
+       LEFT JOIN slaps s ON s.comment_id = c.id
+       WHERE c.thread_id = $1
+       GROUP BY c.id, u.name
+       ORDER BY c.created_at ASC`,
+      [req.params.id, req.user.id]
+    );
+
+    res.json({ ...thread.rows[0], comments: comments.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a comment to a thread
+// POST /threads/:id/comments  { body }
+app.post('/threads/:id/comments', requireAuth, async (req, res) => {
+  const { body } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO comments (thread_id, user_id, body)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [req.params.id, req.user.id, body]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Slap a thread
+// POST /threads/:id/slap
+app.post('/threads/:id/slap', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      'INSERT INTO slaps (user_id, thread_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.user.id, req.params.id]
+    );
+    res.json({ message: 'Slapped!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Unslap a thread
+// DELETE /threads/:id/slap
+app.delete('/threads/:id/slap', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM slaps WHERE user_id = $1 AND thread_id = $2',
+      [req.user.id, req.params.id]
+    );
+    res.json({ message: 'Unslapped!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Slap a comment
+// POST /comments/:id/slap
+app.post('/comments/:id/slap', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      'INSERT INTO slaps (user_id, comment_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.user.id, req.params.id]
+    );
+    res.json({ message: 'Slapped!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Unslap a comment
+// DELETE /comments/:id/slap
+app.delete('/comments/:id/slap', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM slaps WHERE user_id = $1 AND comment_id = $2',
+      [req.user.id, req.params.id]
+    );
+    res.json({ message: 'Unslapped!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

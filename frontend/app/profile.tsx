@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import {
   View,
   Text,
@@ -16,8 +17,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { getMyProfile, updateMyProfile, getAllClasses, dropClass } from '@/utils/api';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-
-const router = useRouter();
 
 const C = {
   headerBg: '#1565c0',
@@ -112,6 +111,9 @@ export default function ProfileScreen() {
   const [classes, setClasses]   = useState<string[]>([]);
   const [blocks,  setBlocks]    = useState<Block[]>([]);
   const [trimmed, setTrimmed] = useState(false);
+
+  const router = useRouter();
+
 
 
   // Edit preference modal
@@ -242,8 +244,18 @@ export default function ProfileScreen() {
   }
 
   return (
+    
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Text style={s.backTxt}>← Back</Text>
+        </TouchableOpacity>
+        <Image
+          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+          style={{ width: 60, height: 60 }}
+        />
+      </View>
+      <View style={s.header_two}>
         <View style={s.avatarRing}>
           <View style={s.avatar}>
             <Text style={s.avatarInitial}>{name?.[0]?.toUpperCase() ?? '?'}</Text>
@@ -373,6 +385,14 @@ const s = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: C.bg },
   scroll: { padding: 16, paddingTop: 8 },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    backgroundColor: '#32a85e',
+    marginBottom: 20,
+  },
+  header_two: {
     backgroundColor: C.headerBg,
     alignItems: 'center',
     paddingTop: 24,
@@ -440,6 +460,8 @@ const s = StyleSheet.create({
   },
   chipText: { color: C.accent, fontSize: 13, fontWeight: '600' },
   emptyTxt: { color: C.textSec, fontSize: 13, padding: 14, fontStyle: 'italic' },
+  backBtn: { paddingRight: 10 },
+  backTxt: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
 });
 
 const m = StyleSheet.create({

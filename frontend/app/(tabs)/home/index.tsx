@@ -6,8 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
-import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, BASE_URL } from '@/utils/api';
-// import { BASE_URL } from '@/utils/api';
+import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, getEnrolledClasses, BASE_URL } from '@/utils/api';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
 
@@ -31,13 +30,12 @@ export default function HomeScreen() {
   const loadMyClasses = async () => {
     setLoading(true);
     try {
-      const profile = await getMyProfile();
-      const classes = (profile.classes ?? []).map((name: string, i: number) => ({
-        id: String(i),
-        name,
+      const classes = await getEnrolledClasses();
+      setMyClasses(classes.map((c: any, i: number) => ({
+        id: c.id,  // real UUID now
+        name: `${c.course_code}${c.name ? ' - ' + c.name : ''}`,
         color: CLASS_COLORS[i % CLASS_COLORS.length],
-      }));
-      setMyClasses(classes);
+      })));
     } catch (e) {
       console.error('Failed to load classes', e);
     } finally {
