@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getMyProfile, getMatches } from '@/utils/api';
+import { getMyProfile, getMatches, getPushStatus } from '@/utils/api';
 import { BASE_URL } from '@/utils/api';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
@@ -15,7 +15,7 @@ export default function ClassScreen() {
   const { id, name, color } = useLocalSearchParams<{ id: string; name: string; color: string }>();
   const router = useRouter();
 
-  const [members,  setMembers]  = useState<{ id: string; name: string; matched: boolean }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; status: 'unmatched' | 'pushed' | 'matched' }[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [className, setClassName] = useState(name ?? 'Class');
 
@@ -50,21 +50,24 @@ export default function ClassScreen() {
       // Get current user's own profile to exclude self
       const me = await getMyProfile();
 
-      const memberList = (data.students ?? [])
-        .filter((s: any) => s.id !== me.id)
-        .map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          matched: matchIds.has(s.id),
-        }))
-        .sort((a: any, b: any) => (b.matched ? 1 : 0) - (a.matched ? 1 : 0));
-
+      const memberList = await Promise.all(
+        (data.students ?? [])
+          .filter((s: any) => s.id !== me.id)
+          .map(async (s: any) => {
+            const { status } = await getPushStatus(s.id);
+            return { id: s.id, name: s.name, status };
+          })
+      );
+      memberList.sort((a, b) => {
+        const order: Record<string, number> = { matched: 0, pushed: 1, unmatched: 2 };
+        return order[a.status] - order[b.status];
+      });
       setMembers(memberList);
-    } catch (e) {
-      console.error('Failed to load class members', e);
-    } finally {
-      setLoading(false);
-    }
+      } catch (e) {
+        console.error('Failed to load class members', e);
+      } finally {
+        setLoading(false);
+      }
   };
 
   return (
@@ -99,16 +102,25 @@ export default function ClassScreen() {
               onPress={() => router.push(`/student/${item.id}`)}
             >
               <View style={styles.memberInfo}>
-                <View style={[styles.memberAvatar, item.matched && styles.matchedAvatar]}>
+                <View style={[
+                  styles.memberAvatar,
+                  item.status === 'matched' && styles.matchedAvatar,
+                  item.status === 'pushed' && styles.pushedAvatar,
+                ]}>
                   <ThemedText style={styles.avatarText}>
                     {item.name.charAt(0)}
                   </ThemedText>
                 </View>
                 <ThemedText style={styles.memberName}>{item.name}</ThemedText>
               </View>
-              {item.matched && (
+              {item.status === 'matched' && (
                 <View style={styles.matchBadge}>
-                  <ThemedText style={styles.matchBadgeText}>Match</ThemedText>
+                  <ThemedText style={styles.matchBadgeText}>Matched</ThemedText>
+                </View>
+              )}
+              {item.status === 'pushed' && (
+                <View style={styles.pushedBadge}>
+                  <ThemedText style={styles.matchBadgeText}>Pending</ThemedText>
                 </View>
               )}
             </TouchableOpacity>
@@ -205,5 +217,14 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
+  },
+  pushedAvatar: {
+    backgroundColor: '#ffa000',
+  },
+  pushedBadge: {
+    backgroundColor: '#ffa000',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
 });

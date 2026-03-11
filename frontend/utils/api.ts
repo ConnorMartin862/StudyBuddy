@@ -116,6 +116,14 @@ export async function getMatches() {
   return await request('GET', '/pushes/matches');
 }
 
+export async function getPushStatus(userId: string) {
+  return await request('GET', `/pushes/status/${userId}`);
+}
+
+export async function getReceivedPushes() {
+  return await request('GET', '/pushes/received');
+}
+
 export async function syncEnrollments() {
   try {
     const [profile, allClasses] = await Promise.all([getMyProfile(), getAllClasses()]);

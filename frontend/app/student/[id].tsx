@@ -8,8 +8,11 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/auth';
+import { TouchableOpacity } from 'react-native';
+import { getPushStatus, pushStudent, unpushStudent } from '@/utils/api';
 
 // ── Colour tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -64,51 +67,54 @@ const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
 const CELL_H = 44;
 
 function ScheduleGrid({ blocks }: { blocks: ScheduleBlock[] }) {
+  const { width } = useWindowDimensions();
   return (
-    <View style={sg.wrapper}>
-      <View style={sg.headerRow}>
-        <View style={sg.timeCol} />
-        {DAYS.map((d) => (
-          <View key={d} style={sg.dayCol}>
-            <Text style={sg.dayLabel}>{d}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={sg.body}>
-        <View style={sg.timeCol}>
-          {HOURS.map((h) => (
-            <View key={h} style={sg.hourCell}>
-              <Text style={sg.hourLabel}>{h <= 12 ? `${h}a` : `${h - 12}p`}</Text>
+    <View style={{width : width}}>
+      <View style={sg.wrapper}>
+        <View style={sg.headerRow}>
+          <View style={sg.timeCol} />
+          {DAYS.map((d) => (
+            <View key={d} style={sg.dayCol}>
+              <Text style={sg.dayLabel}>{d}</Text>
             </View>
           ))}
         </View>
 
-        {DAYS.map((d, di) => (
-          <View key={d} style={sg.dayCol}>
+        <View style={sg.body}>
+          <View style={sg.timeCol}>
             {HOURS.map((h) => (
-              <View key={h} style={sg.gridCell} />
+              <View key={h} style={sg.hourCell}>
+                <Text style={sg.hourLabel}>{h <= 12 ? `${h}a` : `${h - 12}p`}</Text>
+              </View>
             ))}
-
-            {blocks
-              .filter((b) => b.day === di)
-              .map((b, i) => {
-                const top = (b.startHour - 8) * CELL_H;
-                const height = (b.endHour - b.startHour) * CELL_H - 2;
-
-                return (
-                  <View
-                    key={i}
-                    style={[sg.block, { top, height, backgroundColor: b.color || C.accentLt }]}
-                  >
-                    <Text style={sg.blockText} numberOfLines={2}>
-                      {b.label}
-                    </Text>
-                  </View>
-                );
-              })}
           </View>
-        ))}
+
+          {DAYS.map((d, di) => (
+            <View key={d} style={sg.dayCol}>
+              {HOURS.map((h) => (
+                <View key={h} style={sg.gridCell} />
+              ))}
+
+              {blocks
+                .filter((b) => b.day === di)
+                .map((b, i) => {
+                  const top = (b.startHour - 8) * CELL_H;
+                  const height = (b.endHour - b.startHour) * CELL_H - 2;
+
+                  return (
+                    <View
+                      key={i}
+                      style={[sg.block, { top, height, backgroundColor: b.color || C.accentLt }]}
+                    >
+                      <Text style={sg.blockText} numberOfLines={2}>
+                        {b.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -121,6 +127,25 @@ export default function StudentProfileScreen() {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState<'unmatched' | 'pushed' | 'matched'>('unmatched');
+  const [pushLoading, setPushLoading] = useState(false);
+
+  const handlePush = async () => {
+    setPushLoading(true);
+      try {
+        if (pushStatus === 'unmatched') {
+          await pushStudent(id);
+          setPushStatus('pushed');
+        } else if (pushStatus === 'pushed') {
+          await unpushStudent(id);
+          setPushStatus('unmatched');
+        }
+      } catch (e) {
+        console.error('Failed to push', e);
+      } finally {
+        setPushLoading(false);
+      }
+    };
 
   useEffect(() => {
     async function fetchStudent() {
@@ -155,6 +180,8 @@ export default function StudentProfileScreen() {
           classes: Array.isArray(data.classes) ? data.classes : [],
           schedule: Array.isArray(data.schedule) ? data.schedule : [],
         });
+        const statusRes = await getPushStatus(id);
+        setPushStatus(statusRes.status);
       } catch (err: any) {
         setError(err.message || 'Something went wrong.');
         setStudent(FALLBACK);
@@ -163,6 +190,7 @@ export default function StudentProfileScreen() {
       }
     }
 
+    
     fetchStudent();
   }, [id, token]);
 
@@ -200,6 +228,22 @@ export default function StudentProfileScreen() {
         </View>
         <Text style={s.name}>{currentStudent.name}</Text>
         <Text style={s.email}>{currentStudent.email}</Text>
+                {pushLoading ? (
+          <ActivityIndicator color={C.white} style={{ marginTop: 12 }} />
+        ) : pushStatus === 'matched' ? (
+          <View style={s.matchedBtn}>
+            <Text style={s.matchedTxt}>✓ Matched</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={pushStatus === 'pushed' ? s.pushedBtn : s.matchBtn}
+            onPress={handlePush}
+          >
+            <Text style={s.matchBtnTxt}>
+              {pushStatus === 'pushed' ? 'Pending — Undo' : 'Match'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -366,6 +410,29 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  matchBtn: {
+    marginTop: 12,
+    backgroundColor: C.accent,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  pushedBtn: {
+    marginTop: 12,
+    backgroundColor: C.amber,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  matchedBtn: {
+    marginTop: 12,
+    backgroundColor: '#1b5e20',
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  matchBtnTxt: { color: C.white, fontWeight: '700', fontSize: 15 },
+  matchedTxt:  { color: C.white, fontWeight: '700', fontSize: 15 },
   chipText: { color: C.accentLt, fontSize: 13, fontWeight: '600' },
 
   empty: { color: C.textSec, padding: 14, fontSize: 13 },

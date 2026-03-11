@@ -1,24 +1,64 @@
-import { StyleSheet, FlatList, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { getMatches, getSentPushes, getReceivedPushes, pushStudent } from '@/utils/api';
 
-const PUSHED = [
-  { id: 'p1', name: 'Alex Johnson' },
-  { id: 'p2', name: 'Maria Garcia' },
-  { id: 'p3', name: 'James Lee' },
-];
-
-const MATCHED = [
-  { id: 'm1', name: 'Sarah Kim' },
-  { id: 'm2', name: 'Tyler Brooks' },
-];
+type Person = { id: string; name: string };
 
 export default function MatchesScreen() {
   const router = useRouter();
 
-  const StudentCard = ({ id, name }: { id: string; name: string }) => (
+  const [incoming, setIncoming] = useState<Person[]>([]);
+  const [matched,  setMatched]  = useState<Person[]>([]);
+  const [sent,     setSent]     = useState<Person[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [matchingId, setMatchingId] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAll();
+    }, [])
+  );
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [matches, sentPushes, receivedPushes] = await Promise.all([
+        getMatches(),
+        getSentPushes(),
+        getReceivedPushes(),
+      ]);
+
+      const matchIds = new Set(matches.map((m: Person) => m.id));
+
+      // Incoming = received pushes that are NOT already matched
+      setIncoming(receivedPushes.filter((p: Person) => !matchIds.has(p.id)));
+      setMatched(matches);
+      // Sent = sent pushes that are NOT already matched
+      setSent(sentPushes.filter((p: Person) => !matchIds.has(p.id)));
+    } catch (e) {
+      console.error('Failed to load matches', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMatchBack = async (id: string) => {
+    setMatchingId(id);
+    try {
+      await pushStudent(id);
+      await loadAll(); // reload to move them to matched
+    } catch (e) {
+      console.error('Failed to match back', e);
+    } finally {
+      setMatchingId(null);
+    }
+  };
+
+  const IncomingCard = ({ id, name }: Person) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => router.push(`/student/${id}`)}
@@ -27,34 +67,102 @@ export default function MatchesScreen() {
         <ThemedText style={styles.avatarText}>{name[0]}</ThemedText>
       </View>
       <ThemedText style={styles.name}>{name}</ThemedText>
+      <TouchableOpacity
+        style={styles.matchBackBtn}
+        onPress={() => handleMatchBack(id)}
+        disabled={matchingId === id}
+      >
+        {matchingId === id
+          ? <ActivityIndicator color="#fff" size="small" />
+          : <ThemedText style={styles.matchBackTxt}>Match Back</ThemedText>
+        }
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
+  const MatchedCard = ({ id, name }: Person) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push(`/student/${id}`)}
+    >
+      <View style={[styles.avatar, styles.matchedAvatar]}>
+        <ThemedText style={styles.avatarText}>{name[0]}</ThemedText>
+      </View>
+      <ThemedText style={styles.name}>{name}</ThemedText>
+      <View style={styles.matchedTag}>
+        <ThemedText style={styles.tagTxt}>Matched</ThemedText>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const SentCard = ({ id, name }: Person) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push(`/student/${id}`)}
+    >
+      <View style={[styles.avatar, styles.sentAvatar]}>
+        <ThemedText style={styles.avatarText}>{name[0]}</ThemedText>
+      </View>
+      <ThemedText style={styles.name}>{name}</ThemedText>
+      <View style={styles.sentTag}>
+        <ThemedText style={styles.tagTxt}>Requested</ThemedText>
+      </View>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
+        </View>
+        <ActivityIndicator color="#fff" style={{ marginTop: 40 }} />
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
       </View>
 
-      {/* Pushed section */}
-      <ThemedText type="subtitle" style={styles.sectionLabel}>Pushed</ThemedText>
       <FlatList
-        data={PUSHED}
-        keyExtractor={(item) => item.id}
-        scrollEnabled={false}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => <StudentCard {...item} />}
-      />
+        data={[]}
+        keyExtractor={() => ''}
+        renderItem={null}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            {/* Incoming requests */}
+            {incoming.length > 0 && (
+              <>
+                <ThemedText type="subtitle" style={styles.sectionLabel}>
+                  Incoming Requests
+                </ThemedText>
+                {incoming.map(p => <IncomingCard key={p.id} {...p} />)}
+              </>
+            )}
 
-      {/* Matched section */}
-      <ThemedText type="subtitle" style={styles.sectionLabel}>Matched</ThemedText>
-      <FlatList
-        data={MATCHED}
-        keyExtractor={(item) => item.id}
-        scrollEnabled={false}
+            {/* Matched */}
+            <ThemedText type="subtitle" style={styles.sectionLabel}>Matched</ThemedText>
+            {matched.length === 0
+              ? <ThemedText style={styles.empty}>No matches yet.</ThemedText>
+              : matched.map(p => <MatchedCard key={p.id} {...p} />)
+            }
+
+            {/* Sent requests */}
+            {sent.length > 0 && (
+              <>
+                <ThemedText type="subtitle" style={styles.sectionLabel}>
+                  Sent Requests
+                </ThemedText>
+                {sent.map(p => <SentCard key={p.id} {...p} />)}
+              </>
+            )}
+          </>
+        }
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => <StudentCard {...item} />}
       />
     </ThemedView>
   );
@@ -72,9 +180,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 10,
   },
-  headerText: {
-    color: '#ffffff',
-  },
+  headerText: { color: '#ffffff' },
   sectionLabel: {
     color: '#ffffff',
     marginHorizontal: 20,
@@ -83,7 +189,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 20,
-    gap: 10,
+    paddingBottom: 30,
   },
   card: {
     flexDirection: 'row',
@@ -92,23 +198,60 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     gap: 14,
+    marginBottom: 10,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#32a85e',
+    backgroundColor: '#555',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  matchedAvatar: { backgroundColor: '#32a85e' },
+  sentAvatar:    { backgroundColor: '#ffa000' },
   avatarText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
   },
   name: {
+    flex: 1,
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  matchBackBtn: {
+    backgroundColor: '#1565c0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  matchBackTxt: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  matchedTag: {
+    backgroundColor: '#2e7d32',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  sentTag: {
+    backgroundColor: '#ffa000',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  tagTxt: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  empty: {
+    color: 'rgba(255,255,255,0.6)',
+    fontStyle: 'italic',
+    marginBottom: 10,
   },
 });

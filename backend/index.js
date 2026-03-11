@@ -242,6 +242,36 @@ app.delete('/pushes/:toUserId', requireAuth, async (req, res) => {
   }
 });
 
+// Get push status between you and another user
+// GET /pushes/status/:userId
+app.get('/pushes/status/:userId', requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if you pushed them
+    const sentResult = await pool.query(
+      'SELECT * FROM pushes WHERE from_user_id = $1 AND to_user_id = $2',
+      [req.user.id, userId]
+    );
+
+    // Check if they pushed you back
+    const receivedResult = await pool.query(
+      'SELECT * FROM pushes WHERE from_user_id = $1 AND to_user_id = $2',
+      [userId, req.user.id]
+    );
+
+    const pushed   = sentResult.rows.length > 0;
+    const received = receivedResult.rows.length > 0;
+
+    if (pushed && received) return res.json({ status: 'matched' });
+    if (pushed)             return res.json({ status: 'pushed' });
+    return res.json({ status: 'unmatched' });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // !! Must be before /pushes/:toUserId !!
 app.get('/pushes/sent', requireAuth, async (req, res) => {
   try {
@@ -249,6 +279,20 @@ app.get('/pushes/sent', requireAuth, async (req, res) => {
       `SELECT u.id, u.name, u.email FROM users u
        JOIN pushes p ON p.to_user_id = u.id
        WHERE p.from_user_id = $1`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/pushes/received', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email FROM users u
+       JOIN pushes p ON p.from_user_id = u.id
+       WHERE p.to_user_id = $1`,
       [req.user.id]
     );
     res.json(result.rows);
