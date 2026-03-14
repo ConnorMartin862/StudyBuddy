@@ -30,8 +30,7 @@ const C = {
   green: '#43a047',
 };
 
-const BASE_URL =
-  "https://studybuddy-production-b48d.up.railway.app/";
+const BASE_URL = "https://studybuddy-production-b48d.up.railway.app/";
 
   //Platform.OS === 'web'
   //  ? 'http://localhost:3000'
