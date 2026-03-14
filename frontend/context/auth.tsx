@@ -54,7 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const BASE_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'https://joseph-unneeded-straitly.ngrok-free.dev';
+  //const BASE_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'https://joseph-unneeded-straitly.ngrok-free.dev';
+  const BASE_URL = "https://studybuddy-production-b48d.up.railway.app/";
 
   async function login(email: string, password: string) {
     const res = await fetch(`${BASE_URL}/auth/login`, {
