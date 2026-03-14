@@ -31,9 +31,11 @@ const C = {
 };
 
 const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3000'
-    : 'https://joseph-unneeded-straitly.ngrok-free.dev';
+  "https://studybuddy-production-b48d.up.railway.app/";
+
+  //Platform.OS === 'web'
+  //  ? 'http://localhost:3000'
+  //  : 'https://joseph-unneeded-straitly.ngrok-free.dev';
 
 type ScheduleCell = {
   day: number;
