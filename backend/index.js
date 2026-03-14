@@ -488,4 +488,10 @@ app.delete('/comments/:id/slap', requireAuth, async (req, res) => {
 
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+console.log('ENV VARS:', {
+  hasDB: !!process.env.DATABASE_URL,
+  hasJWT: !!process.env.JWT_SECRET,
+  port: process.env.PORT
+});
+console.log('DATABASE_URL starts with:', process.env.DATABASE_URL?.substring(0, 20));
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
