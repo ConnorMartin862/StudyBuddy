@@ -40,6 +40,8 @@ const AuthContext = createContext<{
   logout: () => {},
 });
 
+const BASE_URL = "https://studybuddy-production-b48d.up.railway.app";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
@@ -55,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   //const BASE_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'https://joseph-unneeded-straitly.ngrok-free.dev';
-  const BASE_URL = "https://studybuddy-production-b48d.up.railway.app";
 
   async function login(email: string, password: string) {
     const res = await fetch(`${BASE_URL}/auth/login`, {
@@ -63,13 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    console.log('RAW RESPONSE:', text);
+    const data = JSON.parse(text);
     if (!res.ok) throw new Error(data.error || 'Login failed');
     await saveItem('token', data.token);
     await saveItem('user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
-    await syncEnrollments(); // Sync enrollments after login
+    await syncEnrollments();
   }
 
   async function register(name: string, username: string, email: string, password: string) {
