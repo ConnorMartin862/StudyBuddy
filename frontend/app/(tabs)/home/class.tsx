@@ -2,7 +2,7 @@ import { StyleSheet, TouchableOpacity, View, ScrollView, ActivityIndicator, Text
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { Image } from 'expo-image';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -11,7 +11,7 @@ import { getMyProfile, getPushStatus, getClassById, getThreads } from '@/utils/a
 export default function ClassScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
   const router = useRouter();
-
+  const insets = useSafeAreaInsets();
   const [members,  setMembers]  = useState<{ id: string; name: string; status: 'unmatched' | 'pushed' | 'matched' }[]>([]);
   const [threads,  setThreads]  = useState<any[]>([]);
   const [visibleThreads, setVisibleThreads] = useState(3);
@@ -57,7 +57,7 @@ export default function ClassScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Top bar */}
-      <ThemedView style={styles.header}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ThemedText style={styles.backTxt}>← Back</ThemedText>
         </TouchableOpacity>

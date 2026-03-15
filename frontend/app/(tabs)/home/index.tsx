@@ -1,10 +1,10 @@
 import { StyleSheet, FlatList, TouchableOpacity, Modal, View, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback, useMemo } from 'react';
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, getEnrolledClasses, BASE_URL } from '@/utils/api';
 
@@ -12,6 +12,7 @@ const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [myClasses,    setMyClasses]    = useState<{ id: string; name: string; color: string }[]>([]);
   const [allClasses,   setAllClasses]   = useState<{ id: string; course_code: string; name: string }[]>([]);
@@ -109,7 +110,7 @@ const createAndAddClass = async () => {
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
-      <ThemedView style={styles.header}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>

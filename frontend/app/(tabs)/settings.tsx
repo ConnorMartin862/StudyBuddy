@@ -1,7 +1,7 @@
 import { StyleSheet, FlatList, TouchableOpacity, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -23,7 +23,7 @@ const SETTINGS = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-
+  const insets = useSafeAreaInsets();
   const [toggles, setToggles] = useState<Record<string, boolean>>(
     Object.fromEntries(SETTINGS.map((s) => [s.id, false]))
   );
@@ -39,7 +39,7 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>

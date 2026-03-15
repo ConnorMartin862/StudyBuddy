@@ -1,16 +1,16 @@
 import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMatches, getSentPushes, getReceivedPushes, pushStudent } from '@/utils/api';
 
 type Person = { id: string; name: string };
 
 export default function MatchesScreen() {
   const router = useRouter();
-
+  const insets = useSafeAreaInsets();
   const [incoming, setIncoming] = useState<Person[]>([]);
   const [matched,  setMatched]  = useState<Person[]>([]);
   const [sent,     setSent]     = useState<Person[]>([]);
@@ -123,7 +123,7 @@ export default function MatchesScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
       </View>
 
