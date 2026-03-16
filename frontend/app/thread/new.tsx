@@ -6,7 +6,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
+  Keyboard,
+  Platform,
+  KeyboardAvoidingView,
   ActivityIndicator,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createThread } from '@/utils/api';
@@ -47,52 +51,59 @@ export default function NewThreadScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Text style={s.backTxt}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>New Thread</Text>
-        <View style={{ width: 60 }} />
-      </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={s.safe}>
+        <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={s.header}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Text style={s.backTxt}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={s.headerTitle}>New Thread</Text>
+            <View style={{ width: 60 }} />
+          </View>
 
-      <View style={s.form}>
-        <Text style={s.className}>{className}</Text>
+          <View style={s.form}>
+            <Text style={s.className}>{className}</Text>
 
-        {error ? <Text style={s.error}>{error}</Text> : null}
+            {error ? <Text style={s.error}>{error}</Text> : null}
 
-        <Text style={s.label}>Title *</Text>
-        <TextInput
-          style={s.input}
-          placeholder="What's on your mind?"
-          placeholderTextColor="#555"
-          value={title}
-          onChangeText={setTitle}
-        />
+            <Text style={s.label}>Title *</Text>
+            <TextInput
+              style={s.input}
+              placeholder="What's on your mind?"
+              placeholderTextColor="#555"
+              value={title}
+              onChangeText={setTitle}
+            />
 
-        <Text style={s.label}>Body (optional)</Text>
-        <TextInput
-          style={[s.input, s.bodyInput]}
-          placeholder="Add more details..."
-          placeholderTextColor="#555"
-          value={body}
-          onChangeText={setBody}
-          multiline
-        />
-      </View>
+            <Text style={s.label}>Body (optional)</Text>
+            <TextInput
+              style={[s.input, s.bodyInput]}
+              placeholder="Add more details..."
+              placeholderTextColor="#555"
+              value={body}
+              onChangeText={setBody}
+              multiline
+            />
+          </View>
 
-      <View style={s.footer}>
-        <TouchableOpacity style={s.cancelBtn} onPress={() => router.back()}>
-          <Text style={s.cancelTxt}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
-          {saving
-            ? <ActivityIndicator color={C.white} />
-            : <Text style={s.saveTxt}>Post</Text>
-          }
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <View style={s.footer}>
+            <TouchableOpacity style={s.cancelBtn} onPress={() => router.back()}>
+              <Text style={s.cancelTxt}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
+              {saving
+                ? <ActivityIndicator color={C.white} />
+                : <Text style={s.saveTxt}>Post</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 
