@@ -107,21 +107,23 @@ export default function ScheduleScreen() {
     return { day, hour };
   };
 
+  const gridY = React.useRef(0);
+
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (e) => {
-      blocksRef.current = [...blocks]; // sync ref with current state at drag start
-      const { locationX, locationY } = e.nativeEvent;
-      const cell = getCellFromPosition(locationX, locationY);
+      blocksRef.current = [...blocks];
+      const { pageX, pageY } = e.nativeEvent;
+      const cell = getCellFromPosition(pageX, pageY - gridY.current);
       if (cell) handleCellPress(cell.day, cell.hour);
     },
     onPanResponderMove: (e) => {
-      const { locationX, locationY } = e.nativeEvent;
-      const cell = getCellFromPosition(locationX, locationY);
+      const { pageX, pageY } = e.nativeEvent;
+      const cell = getCellFromPosition(pageX, pageY - gridY.current);
       if (cell) handleCellPress(cell.day, cell.hour);
     },
-    onPanResponderRelease: () => {  // add here
+    onPanResponderRelease: () => {
       setBlocks([...blocksRef.current]);
     },
   });
@@ -195,7 +197,15 @@ export default function ScheduleScreen() {
             ))}
           </View>
           {/* Body with pan responder */}
-          <View style={sg.body} {...panResponder.panHandlers}>
+          <View
+              style={sg.body}
+              {...panResponder.panHandlers}
+              onLayout={(e) => {
+                e.target.measure((_x, _y, _w, _h, _px, py) => {
+                  gridY.current = py;
+                });
+              }}
+            >
             <View style={sg.timeCol}>
               {hours.map(h => (
                 <View key={h} style={sg.hourCell}>
