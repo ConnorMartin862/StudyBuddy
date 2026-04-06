@@ -17,17 +17,14 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { getMyProfile, updateMyProfile, getAllClasses, dropClass } from '@/utils/api';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { useTheme } from '@/context/theme';
+
 
 const C = {
   headerBg: '#1565c0',
   accent:   '#2e7d32',
   accentLt: '#43a047',
   white:    '#ffffff',
-  bg:       '#f5f5f5',
-  card:     '#ffffff',
-  border:   '#e0e0e0',
-  textPri:  '#212121',
-  textSec:  '#757575',
   red:      '#e53935',
   amber:    '#ffa000',
   green:    '#43a047',
@@ -92,18 +89,19 @@ function ScheduleGrid({ blocks, trimmed }: { blocks: Block[], trimmed: boolean }
 }
 
 const sg = StyleSheet.create({
-  wrapper:   { borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
+  wrapper:   { borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a2a' },
   headerRow: { flexDirection: 'row', backgroundColor: C.headerBg },
   timeCol:   { width: 32 },
   dayCol:    { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
   dayLabel:  { color: C.white, fontSize: 10, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
-  body:      { flexDirection: 'row', backgroundColor: C.card },
+  body:      { flexDirection: 'row', backgroundColor: '#1e1e1e' },
   hourCell:  { height: 20, justifyContent: 'center', alignItems: 'flex-end', paddingRight: 2 },
-  hourLabel: { fontSize: 7, color: C.textSec },
-  gridCell:  { height: 20, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  hourLabel: { fontSize: 7, color: '#aaaaaa' },
+  gridCell:  { height: 20, borderBottomWidth: 1, borderBottomColor: '#2a2a2a' },
 });
 
 export default function ProfileScreen() {
+  const { colors, dark } = useTheme();
   const [loading, setLoading]   = useState(true);
   const [name,    setName]      = useState('');
   const [email,   setEmail]     = useState('');
@@ -262,8 +260,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bg }]}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backTxt}>← Back</Text>
@@ -273,7 +270,7 @@ export default function ProfileScreen() {
           style={{ width: 60, height: 60 }}
         />
       </View>
-      <View style={s.header_two}>
+      <View style={[s.header_two, { backgroundColor: dark ? '#121212' : C.headerBg }]}>
         <View style={s.avatarRing}>
           <View style={s.avatar}>
             <Text style={s.avatarInitial}>{name?.[0]?.toUpperCase() ?? '?'}</Text>
@@ -286,14 +283,14 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Sleep Preference Slider */}
-        <View style={s.card}>
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Sleep Schedule</Text>
           </View>
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, color: C.textSec }}>Morning Person</Text>
-              <Text style={{ fontSize: 12, color: C.textSec }}>Night Owl</Text>
+              <Text style={{ fontSize: 12, color: colors.textSec }}>Morning Person</Text>
+              <Text style={{ fontSize: 12, color: colors.textSec }}>Night Owl</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               {[0, 1, 2].map((val) => (
@@ -306,13 +303,13 @@ export default function ProfileScreen() {
                     paddingVertical: 10,
                     borderRadius: 8,
                     alignItems: 'center',
-                    backgroundColor: sleepPref === val ? C.accent : C.border,
+                    backgroundColor: sleepPref === val ? C.accent : colors.border,
                   }}
                 >
-                  <Text style={{ 
-                    color: sleepPref === val ? C.white : C.textSec, 
-                    fontSize: 12, 
-                    fontWeight: sleepPref === val ? '700' : '400' 
+                  <Text style={{
+                    color: sleepPref === val ? C.white : colors.textSec,
+                    fontSize: 12,
+                    fontWeight: sleepPref === val ? '700' : '400'
                   }}>
                     {val === 0 ? '🌅 Morning' : val === 1 ? '😐 Neither' : '🌙 Night Owl'}
                   </Text>
@@ -323,7 +320,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Preferences */}
-        <View style={s.card}>
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Preferences</Text>
             <TouchableOpacity onPress={addPref} style={s.addBtn}>
@@ -331,47 +328,44 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           {prefs.length === 0 && (
-            <Text style={s.emptyTxt}>No preferences yet — tap + to add one.</Text>
+            <Text style={[s.emptyTxt, { color: colors.textSec }]}>No preferences yet — tap + to add one.</Text>
           )}
           {prefs.map((p, i) => (
-            <TouchableOpacity key={i} onPress={() => openEditPref(i)} style={s.prefRow}>
+            <TouchableOpacity key={i} onPress={() => openEditPref(i)} style={[s.prefRow, { borderBottomColor: colors.border }]}>
               <View style={s.bullet} />
-              <Text style={s.prefText}>{p}</Text>
+              <Text style={[s.prefText, { color: colors.textPri }]}>{p}</Text>
               <TouchableOpacity onPress={() => deletePref(i)}>
-                <Ionicons name="close-circle-outline" size={18} color={C.textSec} />
+                <Ionicons name="close-circle-outline" size={18} color={colors.textSec} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Schedule */}
-        <View style={s.card}>
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Schedule</Text>
-            <TouchableOpacity
-              onPress={() => router.push('/schedule')}
-              style={s.addBtn}
-            >
+            <TouchableOpacity onPress={() => router.push('/schedule')} style={s.addBtn}>
               <Ionicons name="pencil" size={14} color={C.white} />
             </TouchableOpacity>
           </View>
           {blocks.length === 0
-            ? <Text style={s.emptyTxt}>No schedule yet — tap the edit button to add one.</Text>
+            ? <Text style={[s.emptyTxt, { color: colors.textSec }]}>No schedule yet — tap the edit button to add one.</Text>
             : <ScheduleGrid blocks={blocks} trimmed={trimmed} />
           }
         </View>
 
         {/* Classes */}
-        <View style={[s.card, { marginBottom: 32 }]}>
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Classes</Text>
           </View>
           {classes.length === 0 && (
-            <Text style={s.emptyTxt}>No classes yet — tap + to add one.</Text>
+            <Text style={[s.emptyTxt, { color: colors.textSec }]}>No classes yet — tap + to add one.</Text>
           )}
           <View style={s.chipWrap}>
             {classes.map((c, i) => (
-              <View key={i} style={s.chip}>
+              <View key={i} style={[s.chip, { borderColor: colors.border }]}>
                 <Text style={s.chipText}>{c}</Text>
                 <TouchableOpacity onPress={() => removeClass(i)}>
                   <Ionicons name="close-circle" size={16} color={C.accentLt} />
@@ -386,19 +380,20 @@ export default function ProfileScreen() {
       {/* Edit preference modal */}
       <Modal visible={editPrefVisible} transparent animationType="fade">
         <View style={m.overlay}>
-          <View style={m.sheet}>
-            <Text style={m.title}>Edit Preference</Text>
+          <View style={[m.sheet, { backgroundColor: colors.card }]}>
+            <Text style={[m.title, { color: colors.textPri }]}>Edit Preference</Text>
             <TextInput
-              style={m.input}
+              style={[m.input, { backgroundColor: colors.input, color: colors.inputTxt, borderColor: colors.border }]}
               value={prefDraft}
               onChangeText={setPrefDraft}
               autoFocus
               multiline
+              placeholderTextColor={colors.textSec}
               placeholder="e.g. Night owl, likes quiet spaces..."
             />
             <View style={m.row}>
               <TouchableOpacity style={m.cancel} onPress={() => setEditPrefVisible(false)}>
-                <Text style={m.cancelTxt}>Cancel</Text>
+                <Text style={[m.cancelTxt, { color: colors.textSec }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={m.save} onPress={savePref}>
                 <Text style={m.saveTxt}>Save</Text>
@@ -411,19 +406,20 @@ export default function ProfileScreen() {
       {/* Add class modal */}
       <Modal visible={addClassVisible} transparent animationType="fade">
         <View style={m.overlay}>
-          <View style={m.sheet}>
-            <Text style={m.title}>Add Class</Text>
+          <View style={[m.sheet, { backgroundColor: colors.card }]}>
+            <Text style={[m.title, { color: colors.textPri }]}>Add Class</Text>
             <TextInput
-              style={m.input}
+              style={[m.input, { backgroundColor: colors.input, color: colors.inputTxt, borderColor: colors.border }]}
               value={classDraft}
               onChangeText={setClassDraft}
               autoFocus
               placeholder="e.g. EECS 441"
+              placeholderTextColor={colors.textSec}
               autoCapitalize="characters"
             />
             <View style={m.row}>
               <TouchableOpacity style={m.cancel} onPress={() => setAddClassVisible(false)}>
-                <Text style={m.cancelTxt}>Cancel</Text>
+                <Text style={[m.cancelTxt, { color: colors.textSec }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={m.save} onPress={addClass}>
                 <Text style={m.saveTxt}>Add</Text>
@@ -437,7 +433,7 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.bg },
+  safe:   { flex: 1 },
   scroll: { padding: 16, paddingTop: 8 },
   header: {
     flexDirection: 'row',
@@ -468,7 +464,6 @@ const s = StyleSheet.create({
   name:  { color: C.white, fontSize: 20, fontWeight: '700' },
   email: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
   card: {
-    backgroundColor: C.card,
     borderRadius: 12,
     marginBottom: 14,
     overflow: 'hidden',
@@ -495,13 +490,13 @@ const s = StyleSheet.create({
   prefRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+    borderBottomWidth: 1,
   },
   bullet: {
     width: 6, height: 6, borderRadius: 3,
     backgroundColor: C.accent, marginRight: 10,
   },
-  prefText: { flex: 1, fontSize: 13, color: C.textPri },
+  prefText: { flex: 1, fontSize: 13 },
   chipWrap: {
     flexDirection: 'row', flexWrap: 'wrap',
     padding: 12, gap: 8,
@@ -514,7 +509,7 @@ const s = StyleSheet.create({
     gap: 6,
   },
   chipText: { color: C.accent, fontSize: 13, fontWeight: '600' },
-  emptyTxt: { color: C.textSec, fontSize: 13, padding: 14, fontStyle: 'italic' },
+  emptyTxt: { fontSize: 13, padding: 14, fontStyle: 'italic' },
   backBtn: { paddingRight: 10 },
   backTxt: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
 });
@@ -525,18 +520,18 @@ const m = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   sheet: {
-    width: '80%', backgroundColor: C.white,
+    width: '80%',
     borderRadius: 14, padding: 20,
   },
-  title: { fontSize: 16, fontWeight: '700', color: C.textPri, marginBottom: 12 },
+  title: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
   input: {
-    borderWidth: 1, borderColor: C.border,
+    borderWidth: 1,
     borderRadius: 8, padding: 10, fontSize: 14,
     minHeight: 70, textAlignVertical: 'top',
   },
   row: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 14, gap: 10 },
   cancel: { paddingHorizontal: 16, paddingVertical: 8 },
-  cancelTxt: { color: C.textSec, fontSize: 14 },
+  cancelTxt: { fontSize: 14 },
   save: {
     backgroundColor: C.accent, borderRadius: 8,
     paddingHorizontal: 20, paddingVertical: 8,

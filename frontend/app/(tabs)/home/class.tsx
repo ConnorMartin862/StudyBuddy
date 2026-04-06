@@ -7,9 +7,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getMyProfile, getPushStatus, getClassById, getThreads } from '@/utils/api';
+import { useTheme } from '@/context/theme';
 
 export default function ClassScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
+  const { dark } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [members,  setMembers]  = useState<{ id: string; name: string; status: 'unmatched' | 'pushed' | 'matched' }[]>([]);
@@ -55,9 +57,9 @@ export default function ClassScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
       {/* Top bar */}
-      <ThemedView style={[styles.header, { paddingTop: insets.top }]}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ThemedText style={styles.backTxt}>← Back</ThemedText>
         </TouchableOpacity>
@@ -93,7 +95,7 @@ export default function ClassScreen() {
                 {threads.slice(0, visibleThreads).map(thread => (
                   <TouchableOpacity
                     key={thread.id}
-                    style={styles.threadCard}
+                    style={[styles.threadCard, dark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
                     onPress={() => router.push({ pathname: '/thread/[id]', params: { id: thread.id, classId: id } })}
                   >
                     <View style={styles.threadTop}>
@@ -133,7 +135,7 @@ export default function ClassScreen() {
               members.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={styles.memberRow}
+                  style={[styles.memberRow, dark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
                   onPress={() => router.push(`/student/${item.id}`)}
                 >
                   <View style={styles.memberInfo}>

@@ -5,10 +5,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMatches, getSentPushes, getReceivedPushes, pushStudent } from '@/utils/api';
+import { useTheme } from '@/context/theme';
 
 type Person = { id: string; name: string };
 
 export default function MatchesScreen() {
+  const { dark } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [incoming, setIncoming] = useState<Person[]>([]);
@@ -60,7 +62,7 @@ export default function MatchesScreen() {
 
   const IncomingCard = ({ id, name }: Person) => (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, dark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
       onPress={() => router.push(`/student/${id}`)}
     >
       <View style={styles.avatar}>
@@ -82,7 +84,7 @@ export default function MatchesScreen() {
 
   const MatchedCard = ({ id, name }: Person) => (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, dark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
       onPress={() => router.push(`/student/${id}`)}
     >
       <View style={[styles.avatar, styles.matchedAvatar]}>
@@ -97,7 +99,7 @@ export default function MatchesScreen() {
 
   const SentCard = ({ id, name }: Person) => (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, dark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
       onPress={() => router.push(`/student/${id}`)}
     >
       <View style={[styles.avatar, styles.sentAvatar]}>
@@ -112,8 +114,8 @@ export default function MatchesScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <View style={styles.header}>
+      <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
+        <View style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
           <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
         </View>
         <ActivityIndicator color="#fff" style={{ marginTop: 40 }} />
@@ -122,8 +124,8 @@ export default function MatchesScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+    <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
+      <View style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
         <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
       </View>
 

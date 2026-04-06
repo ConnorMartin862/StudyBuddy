@@ -7,12 +7,14 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { getMyProfile, getAllClasses, updateMyProfile, createClass, enrollInClass, getEnrolledClasses, BASE_URL } from '@/utils/api';
+import { useTheme } from '@/context/theme';
 
 const CLASS_COLORS = ['#4A90D9', '#E07B53', '#5CB85C', '#9B59B6', '#E67E22', '#E74C3C'];
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { dark, colors } = useTheme();
 
   const [myClasses,    setMyClasses]    = useState<{ id: string; name: string; color: string }[]>([]);
   const [allClasses,   setAllClasses]   = useState<{ id: string; course_code: string; name: string }[]>([]);
@@ -108,9 +110,9 @@ const createAndAddClass = async () => {
 };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
       {/* Header */}
-      <ThemedView style={[styles.header, { paddingTop: insets.top }]}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }, , { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
         <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>
@@ -139,7 +141,10 @@ const createAndAddClass = async () => {
           }
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[styles.classCard, { borderLeftColor: item.color }]}
+              style={[styles.classCard, { 
+                borderLeftColor: item.color,
+                ...(dark && { shadowColor: '#ffffff', shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 })
+              }]}
               onPress={() => router.push({ pathname: '/home/class', params: { id: item.id, name: item.name } })}
             >
               <ThemedText type="subtitle" style={{ color: '#ffffff' }}>{item.name}</ThemedText>

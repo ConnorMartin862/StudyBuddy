@@ -7,29 +7,35 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
 import { logout } from '@/utils/api';
+import { useTheme } from '@/context/theme';
 
 const SETTINGS = [
   { id: '1', name: 'Push Notifications' },
   { id: '2', name: 'Dark Mode' },
-  { id: '3', name: 'Location Services' },
+  { id: '3', name: 'Analytics' },
   { id: '4', name: 'Auto-Match' },
   { id: '5', name: 'Show Online Status' },
   { id: '6', name: 'Sound Effects' },
   { id: '7', name: 'Email Notifications' },
   { id: '8', name: 'Profile Visibility' },
   { id: '9', name: 'Data Sync' },
-  { id: '10', name: 'Analytics' },
 ];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { dark, toggleDark, colors } = useTheme();
   const [toggles, setToggles] = useState<Record<string, boolean>>(
-    Object.fromEntries(SETTINGS.map((s) => [s.id, false]))
+    Object.fromEntries(SETTINGS.map((s) => [s.id, s.id === '2' ? dark : false]))
   );
 
   const handleToggle = (id: string) => {
-    setToggles((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (id === '2') {
+      toggleDark();
+      setToggles((prev) => ({ ...prev, [id]: !prev[id] }));
+    } else {
+      setToggles((prev) => ({ ...prev, [id]: !prev[id] }));
+    }
   };
 
   const handleLogout = async () => {
@@ -38,8 +44,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={[styles.header, { paddingTop: insets.top }]}>
+    <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
         <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>
@@ -56,7 +62,10 @@ export default function SettingsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <ThemedView style={styles.settingRow}>
+          <ThemedView style={[styles.settingRow, { 
+            borderWidth: dark ? 1 : 0, 
+            borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' 
+          }]}>
             <ThemedText style={{ color: '#ffffff', fontSize: 16 }}>{item.name}</ThemedText>
             <Switch
               value={toggles[item.id]}

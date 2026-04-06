@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { AuthProvider } from '@/context/auth';
-
+import { AppThemeProvider } from '@/context/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -31,18 +31,20 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)"       options={{ headerShown: false }} />
-          <Stack.Screen name="modal"        options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="profile" options={{ headerShown: false }} />
-          <Stack.Screen name="student/[id]" options={{ title: 'Student Profile', headerBackTitle: 'Matches' }} />
-          <Stack.Screen name="login"        options={{ headerShown: false }} />
-          <Stack.Screen name="create_class" options={{ title: 'Create Class', headerBackTitle: 'Home' }} />
-          <Stack.Screen name="thread/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="thread/new" options={{ headerShown: false }} />
-        </Stack>
-      </AuthProvider>
+      <AppThemeProvider>
+        <AuthProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)"       options={{ headerShown: false }} />
+            <Stack.Screen name="modal"        options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen name="profile" options={{ headerShown: false }} />
+            <Stack.Screen name="student/[id]" options={{ title: 'Student Profile', headerBackTitle: 'Matches' }} />
+            <Stack.Screen name="login"        options={{ headerShown: false }} />
+            <Stack.Screen name="create_class" options={{ title: 'Create Class', headerBackTitle: 'Home' }} />
+            <Stack.Screen name="thread/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="thread/new" options={{ headerShown: false }} />
+          </Stack>
+        </AuthProvider>
+      </AppThemeProvider>
     </ThemeProvider>
   );
 }

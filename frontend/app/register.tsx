@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-
+import { useTheme } from '@/context/theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/context/auth'
