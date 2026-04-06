@@ -42,7 +42,7 @@ const TRIM_HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
 function ScheduleGrid({ blocks, trimmed }: { blocks: Block[], trimmed: boolean }) {
   const hours = trimmed ? TRIM_HOURS : ALL_HOURS;
   const { width } = useWindowDimensions();
-  
+
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={{ width: width}}>
@@ -124,6 +124,8 @@ export default function ProfileScreen() {
   // Add class modal
   const [addClassVisible, setAddClassVisible] = useState(false);
   const [classDraft,      setClassDraft]      = useState('');
+  const [sleepPref, setSleepPref] = useState<0 | 1 | 2>(1); // 0=morning, 1=neither, 2=night owl
+
 
   // Load profile from API whenever screen is focused
   useFocusEffect(
@@ -141,6 +143,12 @@ export default function ProfileScreen() {
       setName(data.name ?? '');
       setEmail(data.email ?? '');
       setPrefs(data.preferences ?? []);
+      const sp = data.preferences?.find((p: string) => 
+        p === 'Morning Person' || p === 'Mostly Normal Schedule' || p === 'Night Owl'
+      );
+      if (sp === 'Morning Person') setSleepPref(0);
+      else if (sp === 'Night Owl') setSleepPref(2);
+      else setSleepPref(1);
       setClasses(data.classes ?? []);
       setBlocks(data.schedule ?? []);
       const t = Platform.OS === 'web'
@@ -243,6 +251,16 @@ export default function ProfileScreen() {
     );
   }
 
+  const handleSleepPrefChange = async (val: 0 | 1 | 2) => {
+    setSleepPref(val);
+    const label = val === 0 ? 'Morning Person' : val === 2 ? 'Night Owl' : 'Mostly Normal Schedule';
+    const filtered = prefs.filter((p: string) => 
+      p !== 'Morning Person' && p !== 'Night Owl' && p !== 'Mostly Normal Schedule'
+    );
+    const next = [label, ...filtered];
+    await savePrefs(next);
+  };
+
   return (
     
     <SafeAreaView style={s.safe}>
@@ -266,6 +284,43 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Sleep Preference Slider */}
+        <View style={s.card}>
+          <View style={s.cardHeader}>
+            <Text style={s.cardTitle}>Sleep Schedule</Text>
+          </View>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, color: C.textSec }}>Morning Person</Text>
+              <Text style={{ fontSize: 12, color: C.textSec }}>Night Owl</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              {[0, 1, 2].map((val) => (
+                <TouchableOpacity
+                  key={val}
+                  onPress={() => handleSleepPrefChange(val as 0 | 1 | 2)}
+                  style={{
+                    flex: 1,
+                    marginHorizontal: 4,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    backgroundColor: sleepPref === val ? C.accent : C.border,
+                  }}
+                >
+                  <Text style={{ 
+                    color: sleepPref === val ? C.white : C.textSec, 
+                    fontSize: 12, 
+                    fontWeight: sleepPref === val ? '700' : '400' 
+                  }}>
+                    {val === 0 ? '🌅 Morning' : val === 1 ? '😐 Neither' : '🌙 Night Owl'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
 
         {/* Preferences */}
         <View style={s.card}>
