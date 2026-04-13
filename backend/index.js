@@ -71,7 +71,7 @@ app.post('/auth/login', async (req, res) => {
 app.get('/users/me', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, email, preferences, schedule, classes FROM users WHERE id = $1',
+      'SELECT id, name, email, preferences, schedule, classes, assignment_style, campus_frequency, meeting_preference, living_situation FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json(result.rows[0]);
@@ -81,22 +81,30 @@ app.get('/users/me', requireAuth, async (req, res) => {
 });
 
 app.put('/users/me', requireAuth, async (req, res) => {
-  const { name, preferences, schedule, classes } = req.body;
+  const { name, preferences, schedule, classes, assignment_style, campus_frequency, meeting_preference, living_situation } = req.body;
   console.log('Updating user:', { name, preferences, schedule, classes });
   try {
     const result = await pool.query(
       `UPDATE users SET
-        name        = COALESCE($1, name),
-        preferences = COALESCE($2::jsonb, preferences),
-        schedule    = COALESCE($3::jsonb, schedule),
-        classes     = COALESCE($4::jsonb, classes)
-       WHERE id = $5
-       RETURNING id, name, email, preferences, schedule, classes`,
+        name               = COALESCE($1, name),
+        preferences        = COALESCE($2::jsonb, preferences),
+        schedule           = COALESCE($3::jsonb, schedule),
+        classes            = COALESCE($4::jsonb, classes),
+        assignment_style   = COALESCE($5, assignment_style),
+        campus_frequency   = COALESCE($6, campus_frequency),
+        meeting_preference = COALESCE($7, meeting_preference),
+        living_situation   = COALESCE($8, living_situation)
+      WHERE id = $9
+      RETURNING id, name, email, preferences, schedule, classes, assignment_style, campus_frequency, meeting_preference, living_situation`,
       [
         name ?? null,
         preferences != null ? JSON.stringify(preferences) : null,
         schedule != null ? JSON.stringify(schedule) : null,
         classes != null ? JSON.stringify(classes) : null,
+        assignment_style ?? null,
+        campus_frequency ?? null,
+        meeting_preference ?? null,
+        living_situation ?? null,
         req.user.id
       ]
     );
@@ -109,7 +117,7 @@ app.put('/users/me', requireAuth, async (req, res) => {
 app.get('/users/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, email, preferences, schedule, classes FROM users WHERE id = $1',
+      'SELECT id, name, email, preferences, schedule, classes, assignment_style, campus_frequency, meeting_preference, living_situation FROM users WHERE id = $1',
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });

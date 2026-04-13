@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS users (
   preferences JSONB,
   schedule JSONB,
   classes JSONB,
+  assignment_style   TEXT,
+  campus_frequency   TEXT,
+  meeting_preference TEXT,
+  living_situation   TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
