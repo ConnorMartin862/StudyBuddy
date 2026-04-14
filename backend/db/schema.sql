@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   preferences JSONB,
   schedule JSONB,
   classes JSONB,
+  sleep_preference   TEXT,
   assignment_style   TEXT,
   campus_frequency   TEXT,
   meeting_preference TEXT,
