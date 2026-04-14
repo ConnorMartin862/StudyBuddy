@@ -36,7 +36,7 @@ type Block = { day: number; hour: number; color: 'red' | 'green' };
 const ALL_HOURS = Array.from({ length: 24 }, (_, i) => i);
 const TRIM_HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
 
-function ScheduleGrid({ blocks, trimmed }: { blocks: Block[], trimmed: boolean }) {
+function ScheduleGrid({ blocks, trimmed, cardBg }: { blocks: Block[], trimmed: boolean, cardBg: string }) {
   const hours = trimmed ? TRIM_HOURS : ALL_HOURS;
   const { width } = useWindowDimensions();
 
@@ -53,7 +53,7 @@ function ScheduleGrid({ blocks, trimmed }: { blocks: Block[], trimmed: boolean }
             ))}
           </View>
           <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
-            <View style={sg.body}>
+            <View style={[sg.body, { backgroundColor: cardBg }]}>
               <View style={sg.timeCol}>
                 {hours.map(h => (
                   <View key={h} style={sg.hourCell}>
@@ -108,6 +108,11 @@ export default function ProfileScreen() {
   const [prefs,   setPrefs]     = useState<string[]>([]);
   const [classes, setClasses]   = useState<string[]>([]);
   const [blocks,  setBlocks]    = useState<Block[]>([]);
+  const [sleepPrefDB, setSleepPrefDB] = useState<string | null>(null);
+  const [assignmentStyle,   setAssignmentStyle]   = useState<string | null>(null);
+  const [campusFrequency,   setCampusFrequency]   = useState<string | null>(null);
+  const [meetingPref,       setMeetingPref]       = useState<string | null>(null);
+  const [livingSituation,   setLivingSituation]   = useState<string | null>(null);
   const [trimmed, setTrimmed] = useState(false);
 
   const router = useRouter();
@@ -144,12 +149,17 @@ export default function ProfileScreen() {
       const sp = data.preferences?.find((p: string) => 
         p === 'Morning Person' || p === 'Mostly Normal Schedule' || p === 'Night Owl'
       );
-      if (sp === 'Morning Person') setSleepPref(0);
-      else if (sp === 'Night Owl') setSleepPref(2);
+      if (data.sleep_preference === 'Morning Person') setSleepPref(0);
+      else if (data.sleep_preference === 'Night Owl') setSleepPref(2);
       else setSleepPref(1);
       setClasses(data.classes ?? []);
       setBlocks(data.schedule ?? []);
-      const t = Platform.OS === 'web'
+      setSleepPrefDB(data.sleep_preference ?? null);
+      setAssignmentStyle(data.assignment_style ?? null);
+      setCampusFrequency(data.campus_frequency ?? null);
+      setMeetingPref(data.meeting_preference ?? null);
+      setLivingSituation(data.living_situation ?? null);
+       const t = Platform.OS === 'web'
         ? localStorage.getItem('scheduleTrim')
         : await SecureStore.getItemAsync('scheduleTrim');
       setTrimmed(t === 'true');
@@ -162,13 +172,21 @@ export default function ProfileScreen() {
 
   // Save preferences to backend
   const savePrefs = async (newPrefs: string[]) => {
-  setPrefs(newPrefs);
-  try {
-    await updateMyProfile({ preferences: newPrefs });
-  } catch (e: any) {
-    console.error('Failed to save prefs:', JSON.stringify(e?.response?.data));
-  }
-};
+    setPrefs(newPrefs);
+    try {
+      await updateMyProfile({ preferences: newPrefs });
+    } catch (e: any) {
+      console.error('Failed to save prefs:', JSON.stringify(e?.response?.data));
+    }
+  };
+
+  const saveStudyPref = async (field: string, value: string) => {
+    try {
+      await updateMyProfile({ [field]: value });
+    } catch (e) {
+      console.error('Failed to save study pref', e);
+    }
+  };
 
   // Save classes to backend
   const saveClasses = async (newClasses: string[]) => {
@@ -251,12 +269,14 @@ export default function ProfileScreen() {
 
   const handleSleepPrefChange = async (val: 0 | 1 | 2) => {
     setSleepPref(val);
-    const label = val === 0 ? 'Morning Person' : val === 2 ? 'Night Owl' : 'Mostly Normal Schedule';
-    const filtered = prefs.filter((p: string) => 
+    const label = val === 0 ? 'morning' : val === 2 ? 'night_owl' : 'neither';
+    setSleepPrefDB(label);
+    await saveStudyPref('sleep_preference', label);
+    // Remove sleep pref from the old preferences array
+    const filtered = prefs.filter((p: string) =>
       p !== 'Morning Person' && p !== 'Night Owl' && p !== 'Mostly Normal Schedule'
     );
-    const next = [label, ...filtered];
-    await savePrefs(next);
+    await savePrefs(filtered);
   };
 
   return (
@@ -319,10 +339,118 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Assignment Style */}
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
+          <View style={s.cardHeader}>
+            <Text style={s.cardTitle}>When do you do assignments?</Text>
+          </View>
+          <View style={{ padding: 16, flexDirection: 'row', gap: 8 }}>
+            {[
+              { val: 'first_thing', label: '⚡ Right Away' },
+              { val: 'middle',      label: '😐 Middle' },
+              { val: 'procrastinate', label: '😅 Last Min' },
+            ].map(({ val, label }) => (
+              <TouchableOpacity
+                key={val}
+                onPress={() => { setAssignmentStyle(val); saveStudyPref('assignment_style', val); }}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                  backgroundColor: assignmentStyle === val ? C.accent : colors.border,
+                }}
+              >
+                <Text style={{ color: assignmentStyle === val ? C.white : colors.textSec, fontSize: 11, fontWeight: assignmentStyle === val ? '700' : '400', textAlign: 'center' }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Campus Frequency */}
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
+          <View style={s.cardHeader}>
+            <Text style={s.cardTitle}>How often are you on campus?</Text>
+          </View>
+          <View style={{ padding: 16, flexDirection: 'row', gap: 8 }}>
+            {[
+              { val: 'always',       label: '🏫 Always' },
+              { val: 'classes_only', label: '📚 Classes Only' },
+              { val: 'rarely',       label: '🏠 Rarely' },
+            ].map(({ val, label }) => (
+              <TouchableOpacity
+                key={val}
+                onPress={() => { setCampusFrequency(val); saveStudyPref('campus_frequency', val); }}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                  backgroundColor: campusFrequency === val ? C.accent : colors.border,
+                }}
+              >
+                <Text style={{ color: campusFrequency === val ? C.white : colors.textSec, fontSize: 11, fontWeight: campusFrequency === val ? '700' : '400', textAlign: 'center' }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Meeting Preference */}
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
+          <View style={s.cardHeader}>
+            <Text style={s.cardTitle}>How do you prefer to meet?</Text>
+          </View>
+          <View style={{ padding: 16, flexDirection: 'row', gap: 8 }}>
+            {[
+              { val: 'in_person', label: '🤝 In Person' },
+              { val: 'both',      label: '🔄 Both' },
+              { val: 'online',    label: '💻 Online' },
+            ].map(({ val, label }) => (
+              <TouchableOpacity
+                key={val}
+                onPress={() => { setMeetingPref(val); saveStudyPref('meeting_preference', val); }}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                  backgroundColor: meetingPref === val ? C.accent : colors.border,
+                }}
+              >
+                <Text style={{ color: meetingPref === val ? C.white : colors.textSec, fontSize: 11, fontWeight: meetingPref === val ? '700' : '400', textAlign: 'center' }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Living Situation */}
+        <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
+          <View style={s.cardHeader}>
+            <Text style={s.cardTitle}>Where do you live? (Non UMich Students Press Central for on Campus)</Text>
+          </View>
+          <View style={{ padding: 16, flexDirection: 'row', gap: 8 }}>
+            {[
+              { val: 'off_campus',        label: '🏠 Off Campus' },
+              { val: 'on_campus_central', label: '🏙️ Central' },
+              { val: 'on_campus_north',   label: '🌲 North' },
+            ].map(({ val, label }) => (
+              <TouchableOpacity
+                key={val}
+                onPress={() => { setLivingSituation(val); saveStudyPref('living_situation', val); }}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                  backgroundColor: livingSituation === val ? C.accent : colors.border,
+                }}
+              >
+                <Text style={{ color: livingSituation === val ? C.white : colors.textSec, fontSize: 11, fontWeight: livingSituation === val ? '700' : '400', textAlign: 'center' }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* Preferences */}
         <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
-            <Text style={s.cardTitle}>Preferences</Text>
+            <Text style={s.cardTitle}>Other Preferences</Text>
             <TouchableOpacity onPress={addPref} style={s.addBtn}>
               <Ionicons name="add" size={20} color={C.white} />
             </TouchableOpacity>
@@ -351,7 +479,7 @@ export default function ProfileScreen() {
           </View>
           {blocks.length === 0
             ? <Text style={[s.emptyTxt, { color: colors.textSec }]}>No schedule yet — tap the edit button to add one.</Text>
-            : <ScheduleGrid blocks={blocks} trimmed={trimmed} />
+            : <ScheduleGrid blocks={blocks} trimmed={trimmed} cardBg={colors.card} />
           }
         </View>
 

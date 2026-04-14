@@ -201,9 +201,13 @@ export default function ScheduleScreen() {
               style={sg.body}
               {...panResponder.panHandlers}
               onLayout={(e) => {
-                e.target.measure((_x, _y, _w, _h, _px, py) => {
-                  gridY.current = py;
-                });
+                if (Platform.OS === 'web') {
+                  gridY.current = e.nativeEvent.layout.y;
+                } else {
+                  e.target.measure((_x, _y, _w, _h, _px, py) => {
+                    gridY.current = py;
+                  });
+                }
               }}
             >
             <View style={sg.timeCol}>
