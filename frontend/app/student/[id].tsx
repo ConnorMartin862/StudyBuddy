@@ -49,6 +49,11 @@ type Student = {
   preferences?: string[];
   classes?: string[];
   schedule?: ScheduleCell[];
+  assignment_style?: string | null;
+  campus_frequency?: string | null;
+  meeting_preference?: string | null;
+  living_situation?: string | null;
+  sleep_preference?: string | null;
 };
 
 const FALLBACK: Student = {
@@ -180,6 +185,11 @@ export default function StudentProfileScreen() {
           preferences: Array.isArray(data.preferences) ? data.preferences : [],
           classes: Array.isArray(data.classes) ? data.classes : [],
           schedule: Array.isArray(data.schedule) ? data.schedule : [],
+          assignment_style: data.assignment_style ?? null,
+          campus_frequency: data.campus_frequency ?? null,
+          meeting_preference: data.meeting_preference ?? null,
+          living_situation: data.living_situation ?? null,
+          sleep_preference: data.sleep_preference ?? null,
         });
 
         const statusRes = await getPushStatus(id);
@@ -216,6 +226,24 @@ export default function StudentProfileScreen() {
   const prefs = currentStudent.preferences ?? [];
   const classes = currentStudent.classes ?? [];
   const blocks = currentStudent.schedule ?? [];
+  const STUDY_PREF_LABELS: Record<string, string> = {
+    first_thing: '⚡ Right Away',
+    middle: '😐 Middle',
+    procrastinate: '😅 Last Minute',
+    always: '🏫 Always on Campus',
+    classes_only: '📚 Classes Only',
+    rarely: '🏠 Rarely on Campus',
+    in_person: '🤝 In Person',
+    both: '🔄 In Person & Online',
+    online: '💻 Online',
+    on_campus: '🏠 On Campus',
+    off_campus: '🏙️ Off Campus',
+    central: '🏙️ Central Campus Area',
+    north: '🌲 North Campus Area',
+    morning: '🌅 Morning Person',
+    neither: '😐 Neither',
+    night_owl: '🌙 Night Owl',
+  };
 
   return (
     <SafeAreaView style={s.safe}>
@@ -254,15 +282,31 @@ export default function StudentProfileScreen() {
             <Text style={s.cardTitle}>Preferences</Text>
           </View>
 
-          {prefs.length === 0 ? (
+          {/* Structured study preferences */}
+          {[
+            { label: 'Sleep Schedule', value: currentStudent.sleep_preference },
+            { label: 'Assignments', value: currentStudent.assignment_style },
+            { label: 'On Campus', value: currentStudent.campus_frequency },
+            { label: 'Meeting', value: currentStudent.meeting_preference },
+            { label: 'Lives', value: currentStudent.living_situation },
+          ].filter(item => item.value).map(({ label, value }) => (
+            <View key={label} style={s.prefRow}>
+              <View style={s.bullet} />
+              <Text style={[s.prefText, { color: C.textSec, flex: 0, marginRight: 8 }]}>{label}:</Text>
+              <Text style={s.prefText}>{STUDY_PREF_LABELS[value!] ?? value}</Text>
+            </View>
+          ))}
+
+          {/* Free text preferences */}
+          {prefs.length > 0 && prefs.map((p, i) => (
+            <View key={i} style={s.prefRow}>
+              <View style={s.bullet} />
+              <Text style={s.prefText}>{p}</Text>
+            </View>
+          ))}
+
+          {!currentStudent.sleep_preference && !currentStudent.assignment_style && prefs.length === 0 && (
             <Text style={s.empty}>No preferences listed.</Text>
-          ) : (
-            prefs.map((p, i) => (
-              <View key={i} style={s.prefRow}>
-                <View style={s.bullet} />
-                <Text style={s.prefText}>{p}</Text>
-              </View>
-            ))
           )}
         </View>
 

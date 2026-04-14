@@ -82,7 +82,6 @@ app.get('/users/me', requireAuth, async (req, res) => {
 
 app.put('/users/me', requireAuth, async (req, res) => {
   const { name, preferences, schedule, classes, sleep_preference, assignment_style, campus_frequency, meeting_preference, living_situation } = req.body;
-  console.log('Updating user:', { name, preferences, schedule, classes });
   try {
     const result = await pool.query(
       `UPDATE users SET
@@ -90,13 +89,13 @@ app.put('/users/me', requireAuth, async (req, res) => {
         preferences        = COALESCE($2::jsonb, preferences),
         schedule           = COALESCE($3::jsonb, schedule),
         classes            = COALESCE($4::jsonb, classes),
-        assignment_style   = COALESCE($5, assignment_style),
-        campus_frequency   = COALESCE($6, campus_frequency),
-        meeting_preference = COALESCE($7, meeting_preference),
-        living_situation   = COALESCE($8, living_situation)
-        sleep_preference   = COALESCE($9, sleep_preference),
-      WHERE id = $10
-      RETURNING id, name, email, preferences, schedule, classes, assignment_style, campus_frequency, meeting_preference, living_situation`,
+        sleep_preference   = COALESCE($5, sleep_preference),
+        assignment_style   = COALESCE($6, assignment_style),
+        campus_frequency   = COALESCE($7, campus_frequency),
+        meeting_preference = COALESCE($8, meeting_preference),
+        living_situation   = COALESCE($9, living_situation)
+       WHERE id = $10
+       RETURNING id, name, email, preferences, schedule, classes, sleep_preference, assignment_style, campus_frequency, meeting_preference, living_situation`,
       [
         name ?? null,
         preferences != null ? JSON.stringify(preferences) : null,

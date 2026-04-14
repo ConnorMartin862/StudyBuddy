@@ -66,8 +66,17 @@ export async function getMyProfile() {
   return await request('GET', '/users/me');
 }
 
-export async function updateMyProfile(data: { name?: string; preferences?: any[]; schedule?: any[]; classes?: any[] }) {
-  return await request('PUT', '/users/me', data);
+export async function updateMyProfile(data: { 
+  name?: string; 
+  preferences?: any[]; 
+  schedule?: any[]; 
+  classes?: any[];
+  sleep_preference?: string | null;
+  assignment_style?: string | null;
+  campus_frequency?: string | null;
+  meeting_preference?: string | null;
+  living_situation?: string | null;
+}) {  return await request('PUT', '/users/me', data);
 }
 
 export async function getStudentProfile(id: string) {

@@ -146,11 +146,8 @@ export default function ProfileScreen() {
       setName(data.name ?? '');
       setEmail(data.email ?? '');
       setPrefs(data.preferences ?? []);
-      const sp = data.preferences?.find((p: string) => 
-        p === 'Morning Person' || p === 'Mostly Normal Schedule' || p === 'Night Owl'
-      );
-      if (data.sleep_preference === 'Morning Person') setSleepPref(0);
-      else if (data.sleep_preference === 'Night Owl') setSleepPref(2);
+      if (data.sleep_preference === 'morning') setSleepPref(0);
+      else if (data.sleep_preference === 'night_owl') setSleepPref(2);
       else setSleepPref(1);
       setClasses(data.classes ?? []);
       setBlocks(data.schedule ?? []);
@@ -271,8 +268,13 @@ export default function ProfileScreen() {
     setSleepPref(val);
     const label = val === 0 ? 'morning' : val === 2 ? 'night_owl' : 'neither';
     setSleepPrefDB(label);
-    await saveStudyPref('sleep_preference', label);
-    // Remove sleep pref from the old preferences array
+    console.log('Saving sleep_preference:', label);
+    try {
+      const result = await updateMyProfile({ sleep_preference: label });
+      console.log('Save result:', JSON.stringify(result));
+    } catch (e) {
+      console.error('Save failed:', e);
+    }
     const filtered = prefs.filter((p: string) =>
       p !== 'Morning Person' && p !== 'Night Owl' && p !== 'Mostly Normal Schedule'
     );
