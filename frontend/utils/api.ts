@@ -49,7 +49,8 @@ export async function login(email: string, password: string) {
   console.log('Saving token:', data.token); // add this
   await storage.set('token', data.token);
   await storage.set('userId', data.user.id);
-  computeCompatibility().catch(() => {});  // add this
+  console.log('Firing computeCompatibility...');
+  computeCompatibility().catch((e) => console.warn('compute failed:', e));
   return data;
 }
 
