@@ -65,3 +65,11 @@ CREATE TABLE IF NOT EXISTS slaps (
   UNIQUE(user_id, thread_id),
   UNIQUE(user_id, comment_id)
 );
+
+CREATE TABLE IF NOT EXISTS compatibility (
+  user_a_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_b_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  score FLOAT NOT NULL,
+  computed_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (user_a_id, user_b_id)
+);

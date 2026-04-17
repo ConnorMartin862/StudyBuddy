@@ -172,6 +172,15 @@ export async function unslapComment(commentId: string) {
   return await request('DELETE', `/comments/${commentId}/slap`);
 }
 
+// ── Compatibility ─────────────────────────────────────────────────────────────
+export async function computeCompatibility() {
+  return await request('POST', '/compatibility/compute');
+}
+
+export async function getCompatibility() {
+  return await request('GET', '/compatibility');
+}
+
 export async function syncEnrollments() {
   try {
     const [profile, allClasses] = await Promise.all([getMyProfile(), getAllClasses()]);

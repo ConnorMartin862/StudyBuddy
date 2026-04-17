@@ -495,6 +495,97 @@ app.delete('/comments/:id/slap', requireAuth, async (req, res) => {
   }
 });
 
+// ── Compatibility routes ──────────────────────────────────────────────────────
+
+function scorePreference(a, b, extremes, middle) {
+  if (!a || !b) return 0;
+  if (a === b) return 1.0;
+  if ((a === extremes[0] && b === extremes[1]) ||
+      (a === extremes[1] && b === extremes[0])) return 0.0;
+  if ((a === middle && (b === extremes[0] || b === extremes[1])) ||
+      (b === middle && (a === extremes[0] || a === extremes[1]))) return 0.5;
+  return 0;
+}
+
+function computeScore(userA, userB) {
+  const scheduleA = userA.schedule ?? [];
+  const scheduleB = userB.schedule ?? [];
+
+  const greenA = scheduleA.filter(b => b.color === 'green');
+  let scheduleScore = 0;
+  if (greenA.length > 0) {
+    const overlap = greenA.filter(a =>
+      scheduleB.some(b => b.color === 'green' && b.day === a.day && b.hour === a.hour)
+    ).length;
+    scheduleScore = overlap / greenA.length;
+  }
+
+  const classesA = userA.classes ?? [];
+  const classesB = userB.classes ?? [];
+  const sharedClasses = classesA.filter(c => classesB.includes(c)).length;
+  const classScore = sharedClasses >= 2 ? 0.15 : sharedClasses === 1 ? 0.10 : 0;
+
+  const prefWeight = sharedClasses >= 2 ? 0.05 : 0.06;
+
+  const prefTotal = (
+    scorePreference(userA.sleep_preference,   userB.sleep_preference,   ['morning', 'night_owl'],       'neither') +
+    scorePreference(userA.assignment_style,   userB.assignment_style,   ['first_thing', 'procrastinate'], 'middle') +
+    scorePreference(userA.campus_frequency,   userB.campus_frequency,   ['always', 'rarely'],            'classes_only') +
+    scorePreference(userA.meeting_preference, userB.meeting_preference, ['in_person', 'online'],         'both') +
+    scorePreference(userA.living_situation,   userB.living_situation,   ['off_campus', 'on_campus_north'], 'on_campus_central')
+  ) * prefWeight;
+
+  return (0.6 * scheduleScore) + classScore + prefTotal;
+}
+
+async function computeAndStoreCompatibility(userAId, userBId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM users WHERE id = $1 OR id = $2',
+    [userAId, userBId]
+  );
+  const userA = rows.find(r => r.id === userAId);
+  const userB = rows.find(r => r.id === userBId);
+  if (!userA || !userB) return;
+
+  const scoreAB = computeScore(userA, userB);
+  const scoreBA = computeScore(userB, userA);
+
+  await pool.query(`
+    INSERT INTO compatibility (user_a_id, user_b_id, score, computed_at)
+    VALUES ($1, $2, $3, NOW()), ($2, $1, $4, NOW())
+    ON CONFLICT (user_a_id, user_b_id) DO UPDATE
+      SET score = EXCLUDED.score, computed_at = NOW()
+  `, [userAId, userBId, scoreAB, scoreBA]);
+}
+
+app.post('/compatibility/compute', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { rows } = await pool.query('SELECT id FROM users WHERE id != $1', [userId]);
+    await Promise.all(rows.map(r => computeAndStoreCompatibility(userId, r.id)));
+    res.json({ message: `Computed ${rows.length} compatibility scores` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to compute compatibility' });
+  }
+});
+
+app.get('/compatibility', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT c.user_b_id, c.score, u.name, u.username
+      FROM compatibility c
+      JOIN users u ON u.id = c.user_b_id
+      WHERE c.user_a_id = $1
+      ORDER BY c.score DESC
+    `, [req.user.id]);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch matches' });
+  }
+});
+
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 console.log('ENV VARS:', {
