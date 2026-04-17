@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/auth';
-import { getPushStatus, pushStudent, unpushStudent, getCompatibility } from '@/utils/api';
-
+import { getPushStatus, pushStudent, unpushStudent, getCompatibility, getMyProfile } from '@/utils/api';
 // ── Colour tokens ────────────────────────────────────────────────────────────
 const C = {
   headerBg: '#1565c0',
@@ -136,6 +135,7 @@ export default function StudentProfileScreen() {
   const [pushStatus, setPushStatus] = useState<'unmatched' | 'pushed' | 'matched'>('unmatched');
   const [pushLoading, setPushLoading] = useState(false);
   const [score, setScore] = useState<number | null>(null);
+  const [combinedBlocks, setCombinedBlocks] = useState<ScheduleCell[]>([]);
 
 
   const handlePush = async () => {
@@ -200,6 +200,30 @@ export default function StudentProfileScreen() {
         const compatData = await getCompatibility();
         const match = compatData.find((c: any) => c.user_b_id === id);
         setScore(match ? Math.round(match.score * 100) : null);
+        const me = await getMyProfile();
+        const myBlocks: ScheduleCell[] = me.schedule ?? [];
+        const theirBlocks: ScheduleCell[] = Array.isArray(data.schedule) ? data.schedule : [];
+
+        const combined: ScheduleCell[] = [];
+
+        // Green only where both are green
+        theirBlocks.forEach(b => {
+          if (b.color === 'green') {
+            const iAlsoGreen = myBlocks.some(m => m.day === b.day && m.hour === b.hour && m.color === 'green');
+            if (iAlsoGreen) combined.push({ day: b.day, hour: b.hour, color: 'green' });
+          }
+        });
+
+        // Red where either has red
+        const allBlocks = [...myBlocks, ...theirBlocks];
+        allBlocks.forEach(b => {
+          if (b.color === 'red') {
+            const alreadyAdded = combined.some(c => c.day === b.day && c.hour === b.hour);
+            if (!alreadyAdded) combined.push({ day: b.day, hour: b.hour, color: 'red' });
+          }
+        });
+
+        setCombinedBlocks(combined);
       } catch (err: any) {
         setError(err.message || 'Something went wrong.');
         setStudent(FALLBACK);
@@ -325,7 +349,7 @@ export default function StudentProfileScreen() {
             <Text style={s.cardTitle}>Schedule</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 10 }}>
-            <ScheduleGrid blocks={blocks} />
+            <ScheduleGrid blocks={combinedBlocks} />
           </ScrollView>
         </View>
 
