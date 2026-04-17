@@ -115,6 +115,16 @@ app.put('/users/me', requireAuth, async (req, res) => {
   }
 });
 
+app.put('/users/push-token', requireAuth, async (req, res) => {
+  const { push_token } = req.body;
+  try {
+    await pool.query('UPDATE users SET push_token = $1 WHERE id = $2', [push_token, req.user.id]);
+    res.json({ message: 'Token saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/users/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -614,6 +624,30 @@ app.post('/messages/:userId', requireAuth, async (req, res) => {
        VALUES ($1, $2, $3) RETURNING *`,
       [req.user.id, req.params.userId, body]
     );
+
+    // Send push notification to recipient
+    const recipientResult = await pool.query(
+      'SELECT push_token, name FROM users WHERE id = $1', [req.params.userId]
+    );
+    const recipient = recipientResult.rows[0];
+    const senderResult = await pool.query(
+      'SELECT name FROM users WHERE id = $1', [req.user.id]
+    );
+    const senderName = senderResult.rows[0]?.name;
+
+    if (recipient?.push_token) {
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: recipient.push_token,
+          title: senderName,
+          body: body,
+          sound: 'default',
+        }),
+      });
+    }
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });

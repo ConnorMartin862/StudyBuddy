@@ -220,3 +220,7 @@ export async function syncEnrollments() {
     console.warn('syncEnrollments failed', e);
   }
 }
+
+export async function savePushToken(push_token: string) {
+  return await request('PUT', '/users/push-token', { push_token });
+}

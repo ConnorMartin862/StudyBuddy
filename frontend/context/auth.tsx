@@ -2,6 +2,23 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { syncEnrollments, computeCompatibility } from '@/utils/api';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { savePushToken } from '@/utils/api';
+
+async function registerForPushNotifications() {
+  if (!Device.isDevice) return; // won't work in simulator
+  if (Platform.OS === 'web') return; // web doesn't support push
+  const { status: existing } = await Notifications.getPermissionsAsync();
+  let finalStatus = existing;
+  if (existing !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== 'granted') return;
+  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  await savePushToken(token);
+}
 
 async function saveItem(key: string, value: string) {
   if (Platform.OS === 'web') {
@@ -74,6 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
     await syncEnrollments();
     computeCompatibility().catch((e) => console.warn('compute failed:', e));
+    setUser(data.user);
+    registerForPushNotifications().catch(e => console.warn('push token failed:', e));
+    await syncEnrollments();
   }
 
   async function register(name: string, username: string, email: string, password: string) {
@@ -90,6 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
     await syncEnrollments();
     computeCompatibility().catch((e) => console.warn('compute failed:', e));
+    setUser(data.user);
+    registerForPushNotifications().catch(e => console.warn('push token failed:', e));
+    await syncEnrollments();
   }
 
   async function logout() {
