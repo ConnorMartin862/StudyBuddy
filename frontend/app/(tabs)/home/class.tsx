@@ -5,8 +5,8 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { getMyProfile, getPushStatus, getClassById, getThreads, getCompatibility } from '@/utils/api';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getMyProfile, getPushStatus, getClassById, getThreads } from '@/utils/api';
 import { useTheme } from '@/context/theme';
 
 export default function ClassScreen() {
@@ -14,10 +14,15 @@ export default function ClassScreen() {
   const { dark } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [members,  setMembers]  = useState<{ id: string; name: string; status: 'unmatched' | 'pushed' | 'matched' }[]>([]);
-  const [threads,  setThreads]  = useState<any[]>([]);
+  const [members, setMembers] = useState<{
+    id: string;
+    name: string;
+    status: 'unmatched' | 'pushed' | 'matched';
+    score: number | null;
+  }[]>([]);
+  const [threads, setThreads] = useState<any[]>([]);
   const [visibleThreads, setVisibleThreads] = useState(3);
-  const [loading,  setLoading]  = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -34,19 +39,25 @@ export default function ClassScreen() {
         getThreads(id),
       ]);
 
+      let compatMap = new Map();
+      try {
+        const compatibility = await getCompatibility();
+        compatMap = new Map(compatibility.map((c: any) => [c.user_b_id, c.score]));
+      } catch (e) {
+        console.warn('Compatibility fetch failed', e);
+      }
+
       const memberList = await Promise.all(
         (classData.students ?? [])
           .filter((s: any) => s.id !== me.id)
           .map(async (s: any) => {
             const { status } = await getPushStatus(s.id);
-            return { id: s.id, name: s.name, status };
+            const score = compatMap.get(s.id) ?? null;
+            return { id: s.id, name: s.name, status, score };
           })
       );
-      memberList.sort((a, b) => {
-        const order: Record<string, number> = { matched: 0, pushed: 1, unmatched: 2 };
-        return order[a.status] - order[b.status];
-      });
 
+      memberList.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
       setMembers(memberList);
       setThreads(threadData);
     } catch (e) {
@@ -148,7 +159,14 @@ export default function ClassScreen() {
                         {item.name.charAt(0)}
                       </ThemedText>
                     </View>
-                    <ThemedText style={styles.memberName}>{item.name}</ThemedText>
+                    <View>
+                      <ThemedText style={styles.memberName}>{item.name}</ThemedText>
+                      {item.score !== null && (
+                        <ThemedText style={styles.scoreText}>
+                          {Math.round(item.score * 100)}%
+                        </ThemedText>
+                      )}
+                    </View>
                   </View>
                   {item.status === 'matched' && (
                     <View style={styles.matchBadge}>
@@ -253,6 +271,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1c1c1e',
   },
   memberInfo:   { flexDirection: 'row', alignItems: 'center' },
+  scoreText: { color: '#43a047', fontSize: 12, fontWeight: '600', marginTop: 2 },
   memberAvatar: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#555',

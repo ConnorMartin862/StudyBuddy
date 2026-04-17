@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/auth';
-import { getPushStatus, pushStudent, unpushStudent } from '@/utils/api';
+import { getPushStatus, pushStudent, unpushStudent, getCompatibility } from '@/utils/api';
 
 // ── Colour tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -135,6 +135,8 @@ export default function StudentProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pushStatus, setPushStatus] = useState<'unmatched' | 'pushed' | 'matched'>('unmatched');
   const [pushLoading, setPushLoading] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+
 
   const handlePush = async () => {
     setPushLoading(true);
@@ -194,6 +196,10 @@ export default function StudentProfileScreen() {
 
         const statusRes = await getPushStatus(id);
         setPushStatus(statusRes.status);
+
+        const compatData = await getCompatibility();
+        const match = compatData.find((c: any) => c.user_b_id === id);
+        setScore(match ? Math.round(match.score * 100) : null);
       } catch (err: any) {
         setError(err.message || 'Something went wrong.');
         setStudent(FALLBACK);
@@ -238,8 +244,8 @@ export default function StudentProfileScreen() {
     online: '💻 Online',
     on_campus: '🏠 On Campus',
     off_campus: '🏙️ Off Campus',
-    central: '🏙️ Central Campus Area',
-    north: '🌲 North Campus Area',
+    on_campus_central: '🏙️ Central Campus Area',
+    on_campus_north: '🌲 North Campus Area',
     morning: '🌅 Morning Person',
     neither: '😐 Neither',
     night_owl: '🌙 Night Owl',
@@ -257,6 +263,10 @@ export default function StudentProfileScreen() {
         </View>
         <Text style={s.name}>{currentStudent.name}</Text>
         <Text style={s.email}>{currentStudent.email}</Text>
+
+        {score !== null && (
+          <Text style={s.scoreText}>{score}% Match</Text>
+        )}
 
         {pushLoading ? (
           <ActivityIndicator color={C.white} style={{ marginTop: 12 }} />
@@ -508,6 +518,7 @@ const s = StyleSheet.create({
   },
   matchBtnTxt: { color: C.white, fontWeight: '700', fontSize: 15 },
   matchedTxt: { color: C.white, fontWeight: '700', fontSize: 15 },
+  scoreText: { color: '#43a047', fontSize: 15, fontWeight: '700', marginTop: 4 },
   chipText: { color: C.accentLt, fontSize: 13, fontWeight: '600' },
 
   empty: { color: C.textSec, padding: 14, fontSize: 13 },
