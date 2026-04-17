@@ -183,6 +183,19 @@ export async function getCompatibility() {
   return await request('GET', '/compatibility');
 }
 
+// ── Messages ──────────────────────────────────────────────────────────────────
+export async function getMessages(userId: string) {
+  return await request('GET', `/messages/${userId}`);
+}
+
+export async function sendMessage(userId: string, body: string) {
+  return await request('POST', `/messages/${userId}`, { body });
+}
+
+export async function getRecentMessages() {
+  return await request('GET', '/messages/recent');
+}
+
 export async function syncEnrollments() {
   try {
     const [profile, allClasses] = await Promise.all([getMyProfile(), getAllClasses()]);

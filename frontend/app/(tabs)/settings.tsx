@@ -55,7 +55,7 @@ export default function SettingsScreen() {
         />
       </ThemedView>
 
-      <ThemedText type="title" style={styles.title}>Settings</ThemedText>
+      <ThemedText type="title" style={styles.title}>Settings:</ThemedText>
 
       <FlatList
         data={SETTINGS}

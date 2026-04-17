@@ -4,10 +4,12 @@ import { useState, useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getMatches, getSentPushes, getReceivedPushes, pushStudent } from '@/utils/api';
+import { getMatches, getSentPushes, getReceivedPushes, pushStudent, getRecentMessages } from '@/utils/api';
 import { useTheme } from '@/context/theme';
+import { Image } from 'expo-image';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
-type Person = { id: string; name: string };
+type Person = { id: string; name: string; lastMessageAt?: string | null };
 
 export default function MatchesScreen() {
   const { dark } = useTheme();
@@ -28,18 +30,30 @@ export default function MatchesScreen() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [matches, sentPushes, receivedPushes] = await Promise.all([
+      const [matches, sentPushes, receivedPushes, recentMsgs] = await Promise.all([
         getMatches(),
         getSentPushes(),
         getReceivedPushes(),
+        getRecentMessages(),
       ]);
 
       const matchIds = new Set(matches.map((m: Person) => m.id));
+      const recentMap = new Map(recentMsgs.map((r: any) => [r.other_user_id, r.last_message_at]));
 
-      // Incoming = received pushes that are NOT already matched
+      const matchedWithRecent = matches.map((m: Person) => ({
+        ...m,
+        lastMessageAt: recentMap.get(m.id) ?? null,
+      }));
+
+      matchedWithRecent.sort((a: Person, b: Person) => {
+        if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+        if (!a.lastMessageAt) return 1;
+        if (!b.lastMessageAt) return -1;
+        return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+      });
+
       setIncoming(receivedPushes.filter((p: Person) => !matchIds.has(p.id)));
-      setMatched(matches);
-      // Sent = sent pushes that are NOT already matched
+      setMatched(matchedWithRecent);
       setSent(sentPushes.filter((p: Person) => !matchIds.has(p.id)));
     } catch (e) {
       console.error('Failed to load matches', e);
@@ -91,9 +105,12 @@ export default function MatchesScreen() {
         <ThemedText style={styles.avatarText}>{name[0]}</ThemedText>
       </View>
       <ThemedText style={styles.name}>{name}</ThemedText>
-      <View style={styles.matchedTag}>
-        <ThemedText style={styles.tagTxt}>Matched</ThemedText>
-      </View>
+      <TouchableOpacity
+        style={styles.dmBtn}
+        onPress={() => router.push({ pathname: '/dm/[id]' as any, params: { id, name } })}
+      >
+        <ThemedText style={styles.dmTxt}>💬</ThemedText>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -116,7 +133,7 @@ export default function MatchesScreen() {
     return (
       <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
         <View style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
-          <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
+          <ThemedText type="title" style={styles.title}>Matches</ThemedText>
         </View>
         <ActivityIndicator color="#fff" style={{ marginTop: 40 }} />
       </ThemedView>
@@ -126,8 +143,15 @@ export default function MatchesScreen() {
   return (
     <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
       <View style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
-        <ThemedText type="title" style={styles.headerText}>Matches</ThemedText>
+        <TouchableOpacity onPress={() => router.push('/profile')}>
+          <IconSymbol name="person.circle.fill" size={48} color='#fff' />
+        </TouchableOpacity>
+        <Image
+          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+          style={{ width: 60, height: 60 }}
+        />
       </View>
+      <ThemedText type="title" style={styles.title}>Matches:</ThemedText>
 
       <FlatList
         data={[]}
@@ -177,12 +201,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    backgroundColor: '#32a85e',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 0,
   },
-  headerText: { color: '#ffffff' },
+  title: {
+    color: '#ffffff',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
   sectionLabel: {
     color: '#ffffff',
     marginHorizontal: 20,
@@ -239,6 +268,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+  },
+  dmBtn: {
+    backgroundColor: '#1565c0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  dmTxt: {
+    fontSize: 18,
   },
   sentTag: {
     backgroundColor: '#ffa000',
