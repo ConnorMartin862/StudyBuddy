@@ -73,3 +73,11 @@ CREATE TABLE IF NOT EXISTS compatibility (
   computed_at TIMESTAMP DEFAULT NOW(),
   PRIMARY KEY (user_a_id, user_b_id)
 );
+
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);

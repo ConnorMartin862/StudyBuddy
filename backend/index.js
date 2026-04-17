@@ -586,6 +586,56 @@ app.get('/compatibility', requireAuth, async (req, res) => {
   }
 });
 
+// ── Message routes ────────────────────────────────────────────────────────────
+
+// Get most recent message timestamp for each matched user
+app.get('/messages/recent', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        CASE WHEN from_user_id = $1 THEN to_user_id ELSE from_user_id END as other_user_id,
+        MAX(created_at) as last_message_at
+       FROM messages
+       WHERE from_user_id = $1 OR to_user_id = $1
+       GROUP BY other_user_id`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/messages/:userId', requireAuth, async (req, res) => {
+  const { body } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO messages (from_user_id, to_user_id, body)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [req.user.id, req.params.userId, body]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/messages/:userId', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT m.*, u.name as from_name FROM messages m
+       JOIN users u ON u.id = m.from_user_id
+       WHERE (m.from_user_id = $1 AND m.to_user_id = $2)
+          OR (m.from_user_id = $2 AND m.to_user_id = $1)
+       ORDER BY m.created_at ASC`,
+      [req.user.id, req.params.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 console.log('ENV VARS:', {
