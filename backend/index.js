@@ -66,6 +66,46 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
+// ── Search routes ─────────────────────────────────────────────────────────────
+
+app.get('/users/search', requireAuth, async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.json([]);
+  try {
+    const { rows } = await pool.query(`
+      SELECT 
+        u.id, u.name, u.username,
+        similarity(u.name, $1) as name_sim,
+        similarity(u.username, $1) as user_sim,
+        GREATEST(similarity(u.name, $1), similarity(u.username, $1)) as best_sim,
+        EXISTS(SELECT 1 FROM pushes WHERE from_user_id = $2 AND to_user_id = u.id) as i_pushed,
+        EXISTS(SELECT 1 FROM pushes WHERE from_user_id = u.id AND to_user_id = $2) as they_pushed
+      FROM users u
+      WHERE u.id != $2
+        AND GREATEST(similarity(u.name, $1), similarity(u.username, $1)) > 0.15
+      ORDER BY best_sim DESC
+      LIMIT 20
+    `, [q, req.user.id]);
+
+    const results = rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      username: r.username,
+      status: (r.i_pushed && r.they_pushed) ? 'matched'
+            : r.i_pushed ? 'pushed'
+            : r.they_pushed ? 'incoming'
+            : 'unmatched'
+    }));
+
+    // Sort: matched first, then incoming, then pushed, then unmatched
+    const order = { matched: 0, incoming: 1, pushed: 2, unmatched: 3 };    results.sort((a, b) => order[a.status] - order[b.status]);
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── User routes ───────────────────────────────────────────────────────────────
 
 app.get('/users/me', requireAuth, async (req, res) => {
