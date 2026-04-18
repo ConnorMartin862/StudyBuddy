@@ -201,6 +201,11 @@ export async function searchUsers(q: string) {
   return await request('GET', `/users/search?q=${encodeURIComponent(q)}`);
 }
 
+// ── Recommendations ───────────────────────────────────────────────────────────
+export async function getRecommendations() {
+  return await request('GET', '/recommendations');
+}
+
 export async function syncEnrollments() {
   try {
     const [profile, allClasses] = await Promise.all([getMyProfile(), getAllClasses()]);

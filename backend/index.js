@@ -751,6 +751,40 @@ app.get('/messages/:userId', requireAuth, async (req, res) => {
   }
 });
 
+// ── Recommendations ───────────────────────────────────────────────────────────
+
+app.get('/recommendations', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get current user's classes
+    const meResult = await pool.query('SELECT classes FROM users WHERE id = $1', [userId]);
+    const myClasses = meResult.rows[0]?.classes ?? [];
+
+    if (myClasses.length === 0) return res.json([]);
+
+    // Get all users who share at least one class, excluding already pushed/matched
+    const { rows } = await pool.query(`
+      SELECT u.id, u.name, u.username, c.score
+      FROM users u
+      JOIN compatibility c ON c.user_a_id = $1 AND c.user_b_id = u.id
+      WHERE u.id != $1
+        AND u.classes IS NOT NULL
+        AND u.classes::jsonb ?| $2
+        AND NOT EXISTS (
+          SELECT 1 FROM pushes 
+          WHERE from_user_id = $1 AND to_user_id = u.id
+        )
+      ORDER BY c.score DESC
+    `, [userId, myClasses]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
+  }
+});
+
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 console.log('ENV VARS:', {
