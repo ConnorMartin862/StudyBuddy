@@ -11,10 +11,11 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { getMyProfile, updateMyProfile, getAllClasses, dropClass } from '@/utils/api';
+import { getMyProfile, updateMyProfile, getAllClasses, dropClass, deleteAccount, logout } from '@/utils/api';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/context/theme';
@@ -114,23 +115,17 @@ export default function ProfileScreen() {
   const [meetingPref,       setMeetingPref]       = useState<string | null>(null);
   const [livingSituation,   setLivingSituation]   = useState<string | null>(null);
   const [trimmed, setTrimmed] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const router = useRouter();
 
-
-
-  // Edit preference modal
   const [editPrefVisible, setEditPrefVisible] = useState(false);
   const [editingPrefIdx,  setEditingPrefIdx]  = useState<number | null>(null);
   const [prefDraft,       setPrefDraft]       = useState('');
-
-  // Add class modal
   const [addClassVisible, setAddClassVisible] = useState(false);
   const [classDraft,      setClassDraft]      = useState('');
-  const [sleepPref, setSleepPref] = useState<0 | 1 | 2>(1); // 0=morning, 1=neither, 2=night owl
+  const [sleepPref, setSleepPref] = useState<0 | 1 | 2>(1);
 
-
-  // Load profile from API whenever screen is focused
   useFocusEffect(
     useCallback(() => {
       loadProfile();
@@ -156,7 +151,7 @@ export default function ProfileScreen() {
       setCampusFrequency(data.campus_frequency ?? null);
       setMeetingPref(data.meeting_preference ?? null);
       setLivingSituation(data.living_situation ?? null);
-       const t = Platform.OS === 'web'
+      const t = Platform.OS === 'web'
         ? localStorage.getItem('scheduleTrim')
         : await SecureStore.getItemAsync('scheduleTrim');
       setTrimmed(t === 'true');
@@ -167,7 +162,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Save preferences to backend
   const savePrefs = async (newPrefs: string[]) => {
     setPrefs(newPrefs);
     try {
@@ -185,7 +179,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Save classes to backend
   const saveClasses = async (newClasses: string[]) => {
     setClasses(newClasses);
     try {
@@ -203,10 +196,7 @@ export default function ProfileScreen() {
 
   const savePref = async () => {
     if (editingPrefIdx === null) return;
-    if (!prefDraft.trim()) {
-    setEditPrefVisible(false);
-      return;
-    }
+    if (!prefDraft.trim()) { setEditPrefVisible(false); return; }
     const next = [...prefs];
     next[editingPrefIdx] = prefDraft;
     await savePrefs(next);
@@ -243,7 +233,6 @@ export default function ProfileScreen() {
     setClasses(next);
     try {
       await updateMyProfile({ classes: next });
-      // Find the matching class in the DB and drop enrollment
       const allClasses = await getAllClasses();
       const match = allClasses.find((c: any) =>
         `${c.course_code} - ${c.name}` === label ||
@@ -254,6 +243,46 @@ export default function ProfileScreen() {
     } catch (e) {
       console.error('Failed to remove class', e);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently erase all your data including your profile, classes, matches, and messages. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete My Account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Are you absolutely sure?',
+              `Your account "${name}" and all associated data will be permanently deleted.`,
+              [
+                { text: 'Go Back', style: 'cancel' },
+                {
+                  text: 'Yes, Delete Everything',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setDeleting(true);
+                    try {
+                      await deleteAccount();
+                      await logout();
+                      router.replace('/login');
+                    } catch (e) {
+                      console.error('Failed to delete account', e);
+                      setDeleting(false);
+                      Alert.alert('Error', 'Failed to delete account. Please try again.');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -268,10 +297,8 @@ export default function ProfileScreen() {
     setSleepPref(val);
     const label = val === 0 ? 'morning' : val === 2 ? 'night_owl' : 'neither';
     setSleepPrefDB(label);
-    console.log('Saving sleep_preference:', label);
     try {
-      const result = await updateMyProfile({ sleep_preference: label });
-      console.log('Save result:', JSON.stringify(result));
+      await updateMyProfile({ sleep_preference: label });
     } catch (e) {
       console.error('Save failed:', e);
     }
@@ -306,7 +333,7 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Sleep Preference Slider */}
+        {/* Sleep Preference */}
         <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
             <Text style={s.cardTitle}>Sleep Schedule</Text>
@@ -321,20 +348,9 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   key={val}
                   onPress={() => handleSleepPrefChange(val as 0 | 1 | 2)}
-                  style={{
-                    flex: 1,
-                    marginHorizontal: 4,
-                    paddingVertical: 10,
-                    borderRadius: 8,
-                    alignItems: 'center',
-                    backgroundColor: sleepPref === val ? C.accent : colors.border,
-                  }}
+                  style={{ flex: 1, marginHorizontal: 4, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: sleepPref === val ? C.accent : colors.border }}
                 >
-                  <Text style={{
-                    color: sleepPref === val ? C.white : colors.textSec,
-                    fontSize: 12,
-                    fontWeight: sleepPref === val ? '700' : '400'
-                  }}>
+                  <Text style={{ color: sleepPref === val ? C.white : colors.textSec, fontSize: 12, fontWeight: sleepPref === val ? '700' : '400' }}>
                     {val === 0 ? '🌅 Morning' : val === 1 ? '😐 Neither' : '🌙 Night Owl'}
                   </Text>
                 </TouchableOpacity>
@@ -354,17 +370,9 @@ export default function ProfileScreen() {
               { val: 'middle',      label: '😐 Middle' },
               { val: 'procrastinate', label: '😅 Last Min' },
             ].map(({ val, label }) => (
-              <TouchableOpacity
-                key={val}
-                onPress={() => { setAssignmentStyle(val); saveStudyPref('assignment_style', val); }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
-                  backgroundColor: assignmentStyle === val ? C.accent : colors.border,
-                }}
-              >
-                <Text style={{ color: assignmentStyle === val ? C.white : colors.textSec, fontSize: 11, fontWeight: assignmentStyle === val ? '700' : '400', textAlign: 'center' }}>
-                  {label}
-                </Text>
+              <TouchableOpacity key={val} onPress={() => { setAssignmentStyle(val); saveStudyPref('assignment_style', val); }}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: assignmentStyle === val ? C.accent : colors.border }}>
+                <Text style={{ color: assignmentStyle === val ? C.white : colors.textSec, fontSize: 11, fontWeight: assignmentStyle === val ? '700' : '400', textAlign: 'center' }}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -381,17 +389,9 @@ export default function ProfileScreen() {
               { val: 'classes_only', label: '📚 Classes Only' },
               { val: 'rarely',       label: '🏠 Rarely' },
             ].map(({ val, label }) => (
-              <TouchableOpacity
-                key={val}
-                onPress={() => { setCampusFrequency(val); saveStudyPref('campus_frequency', val); }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
-                  backgroundColor: campusFrequency === val ? C.accent : colors.border,
-                }}
-              >
-                <Text style={{ color: campusFrequency === val ? C.white : colors.textSec, fontSize: 11, fontWeight: campusFrequency === val ? '700' : '400', textAlign: 'center' }}>
-                  {label}
-                </Text>
+              <TouchableOpacity key={val} onPress={() => { setCampusFrequency(val); saveStudyPref('campus_frequency', val); }}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: campusFrequency === val ? C.accent : colors.border }}>
+                <Text style={{ color: campusFrequency === val ? C.white : colors.textSec, fontSize: 11, fontWeight: campusFrequency === val ? '700' : '400', textAlign: 'center' }}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -408,17 +408,9 @@ export default function ProfileScreen() {
               { val: 'both',      label: '🔄 Both' },
               { val: 'online',    label: '💻 Online' },
             ].map(({ val, label }) => (
-              <TouchableOpacity
-                key={val}
-                onPress={() => { setMeetingPref(val); saveStudyPref('meeting_preference', val); }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
-                  backgroundColor: meetingPref === val ? C.accent : colors.border,
-                }}
-              >
-                <Text style={{ color: meetingPref === val ? C.white : colors.textSec, fontSize: 11, fontWeight: meetingPref === val ? '700' : '400', textAlign: 'center' }}>
-                  {label}
-                </Text>
+              <TouchableOpacity key={val} onPress={() => { setMeetingPref(val); saveStudyPref('meeting_preference', val); }}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: meetingPref === val ? C.accent : colors.border }}>
+                <Text style={{ color: meetingPref === val ? C.white : colors.textSec, fontSize: 11, fontWeight: meetingPref === val ? '700' : '400', textAlign: 'center' }}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -427,7 +419,7 @@ export default function ProfileScreen() {
         {/* Living Situation */}
         <View style={[s.card, { backgroundColor: colors.card, borderWidth: dark ? 1 : 0, borderColor: dark ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
           <View style={s.cardHeader}>
-            <Text style={s.cardTitle}>Where do you live? (Non UMich Students Press Central for on Campus)</Text>
+            <Text style={s.cardTitle}>Where do you live?</Text>
           </View>
           <View style={{ padding: 16, flexDirection: 'row', gap: 8 }}>
             {[
@@ -435,17 +427,9 @@ export default function ProfileScreen() {
               { val: 'on_campus_central', label: '🏙️ Central' },
               { val: 'on_campus_north',   label: '🌲 North' },
             ].map(({ val, label }) => (
-              <TouchableOpacity
-                key={val}
-                onPress={() => { setLivingSituation(val); saveStudyPref('living_situation', val); }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
-                  backgroundColor: livingSituation === val ? C.accent : colors.border,
-                }}
-              >
-                <Text style={{ color: livingSituation === val ? C.white : colors.textSec, fontSize: 11, fontWeight: livingSituation === val ? '700' : '400', textAlign: 'center' }}>
-                  {label}
-                </Text>
+              <TouchableOpacity key={val} onPress={() => { setLivingSituation(val); saveStudyPref('living_situation', val); }}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: livingSituation === val ? C.accent : colors.border }}>
+                <Text style={{ color: livingSituation === val ? C.white : colors.textSec, fontSize: 11, fontWeight: livingSituation === val ? '700' : '400', textAlign: 'center' }}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -506,6 +490,19 @@ export default function ProfileScreen() {
             ))}
           </View>
         </View>
+
+        {/* Delete Account */}
+        <TouchableOpacity
+          style={[s.deleteBtn, deleting && { opacity: 0.5 }]}
+          onPress={handleDeleteAccount}
+          disabled={deleting}
+        >
+          {deleting
+            ? <ActivityIndicator color={C.white} size="small" />
+            : <Text style={s.deleteTxt}>Delete Account</Text>
+          }
+        </TouchableOpacity>
+        <Text style={s.deleteWarning}>This will permanently erase all your data.</Text>
 
       </ScrollView>
 
@@ -568,105 +565,41 @@ const s = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { padding: 16, paddingTop: 8 },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    backgroundColor: '#32a85e',
-    marginBottom: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 40, backgroundColor: '#32a85e', marginBottom: 20,
   },
-  header_two: {
-    backgroundColor: C.headerBg,
-    alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 20,
-  },
-  avatarRing: {
-    width: 76, height: 76, borderRadius: 38,
-    borderWidth: 3, borderColor: C.white,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 66, height: 66, borderRadius: 33,
-    backgroundColor: '#90a4ae',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  header_two: { backgroundColor: C.headerBg, alignItems: 'center', paddingTop: 24, paddingBottom: 20 },
+  avatarRing: { width: 76, height: 76, borderRadius: 38, borderWidth: 3, borderColor: C.white, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  avatar: { width: 66, height: 66, borderRadius: 33, backgroundColor: '#90a4ae', alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { color: C.white, fontSize: 28, fontWeight: '700' },
   name:  { color: C.white, fontSize: 20, fontWeight: '700' },
   email: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
-  card: {
-    borderRadius: 12,
-    marginBottom: 14,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: C.headerBg,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
+  card: { borderRadius: 12, marginBottom: 14, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.headerBg, paddingHorizontal: 14, paddingVertical: 10 },
   cardTitle: { color: C.white, fontSize: 15, fontWeight: '700' },
-  addBtn: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: C.accent,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  prefRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  bullet: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: C.accent, marginRight: 10,
-  },
+  addBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  prefRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1 },
+  bullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.accent, marginRight: 10 },
   prefText: { flex: 1, fontSize: 13 },
-  chipWrap: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    padding: 12, gap: 8,
-  },
-  chip: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#e8f5e9',
-    borderWidth: 1, borderColor: C.accentLt,
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-    gap: 6,
-  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e8f5e9', borderWidth: 1, borderColor: C.accentLt, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   chipText: { color: C.accent, fontSize: 13, fontWeight: '600' },
   emptyTxt: { fontSize: 13, padding: 14, fontStyle: 'italic' },
   backBtn: { paddingRight: 10 },
   backTxt: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  deleteBtn: { backgroundColor: C.red, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8, marginBottom: 8 },
+  deleteTxt: { color: C.white, fontSize: 16, fontWeight: '700' },
+  deleteWarning: { color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', marginBottom: 40 },
 });
 
 const m = StyleSheet.create({
-  overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  sheet: {
-    width: '80%',
-    borderRadius: 14, padding: 20,
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  sheet: { width: '80%', borderRadius: 14, padding: 20 },
   title: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8, padding: 10, fontSize: 14,
-    minHeight: 70, textAlignVertical: 'top',
-  },
+  input: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14, minHeight: 70, textAlignVertical: 'top' },
   row: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 14, gap: 10 },
   cancel: { paddingHorizontal: 16, paddingVertical: 8 },
   cancelTxt: { fontSize: 14 },
-  save: {
-    backgroundColor: C.accent, borderRadius: 8,
-    paddingHorizontal: 20, paddingVertical: 8,
-  },
+  save: { backgroundColor: C.accent, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
   saveTxt: { color: C.white, fontSize: 14, fontWeight: '700' },
 });

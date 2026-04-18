@@ -234,3 +234,23 @@ export async function syncEnrollments() {
 export async function savePushToken(push_token: string) {
   return await request('PUT', '/users/push-token', { push_token });
 }
+
+export async function blockUser(userId: string) {
+  return await request('POST', `/blocks/${userId}`);
+}
+
+export async function unblockUser(userId: string) {
+  return await request('DELETE', `/blocks/${userId}`);
+}
+
+export async function getBlockedUsers() {
+  return await request('GET', '/blocks');
+}
+
+export async function reportUser(userId: string, reason: string) {
+  return await request('POST', `/reports/${userId}`, { reason });
+}
+
+export async function deleteAccount() {
+  return await request('DELETE', '/users/me');
+}

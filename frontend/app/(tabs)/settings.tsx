@@ -103,10 +103,15 @@ export default function SettingsScreen() {
           </ThemedView>
         )}
         ListFooterComponent={
+        <>
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
             <ThemedText style={styles.logoutTxt}>Log Out</ThemedText>
           </TouchableOpacity>
-        }
+          <TouchableOpacity style={styles.privacyBtn} onPress={() => router.push('/privacy')}>
+            <ThemedText style={styles.privacyTxt}>Privacy Policy</ThemedText>
+          </TouchableOpacity>
+        </>
+}
       />
     </ThemedView>
   );
@@ -159,4 +164,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  privacyBtn: { alignItems: 'center', paddingVertical: 16 },
+  privacyTxt: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
 });
