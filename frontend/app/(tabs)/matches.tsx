@@ -189,10 +189,12 @@ export default function MatchesScreen() {
         <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
-          style={{ width: 60, height: 60 }}
-        />
+        <TouchableOpacity onPress={() => router.push('/recommendations' as any)}>
+          <Image
+            source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+            style={{ width: 60, height: 60 }}
+          />
+        </TouchableOpacity>
       </View>
       <ThemedText type="title" style={styles.title}>Matches:</ThemedText>
       

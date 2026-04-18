@@ -74,10 +74,12 @@ export default function ClassScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ThemedText style={styles.backTxt}>← Back</ThemedText>
         </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
-          style={{ width: 60, height: 60 }}
-        />
+        <TouchableOpacity onPress={() => router.push('/recommendations' as any)}>
+          <Image
+            source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+            style={{ width: 60, height: 60 }}
+          />
+        </TouchableOpacity>
       </ThemedView>
 
       <ScrollView contentContainerStyle={styles.scroll}>

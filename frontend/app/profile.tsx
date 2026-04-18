@@ -287,10 +287,12 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backTxt}>← Back</Text>
         </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
-          style={{ width: 60, height: 60 }}
-        />
+        <TouchableOpacity onPress={() => router.push('/recommendations' as any)}>
+          <Image
+            source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+            style={{ width: 60, height: 60 }}
+          />
+        </TouchableOpacity>
       </View>
       <View style={[s.header_two, { backgroundColor: dark ? '#121212' : C.headerBg }]}>
         <View style={s.avatarRing}>

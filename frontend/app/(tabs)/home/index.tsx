@@ -1,4 +1,4 @@
-import { StyleSheet, FlatList, TouchableOpacity, Modal, View, ActivityIndicator, TextInput } from 'react-native';
+import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator, TextInput, Text, Modal } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback, useMemo } from 'react';
 import { ThemedText } from '@/components/themed-text';
@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const [loading,      setLoading]      = useState(true);
   const [adding,       setAdding]       = useState(false);
   const [creating,     setCreating]     = useState(false);
+  const [dolphinMsg, setDolphinMsg] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -33,9 +34,27 @@ export default function HomeScreen() {
   const loadMyClasses = async () => {
     setLoading(true);
     try {
-      const classes = await getEnrolledClasses();
+      const [classes, profile] = await Promise.all([
+        getEnrolledClasses(),
+        getMyProfile(),
+      ]);
+
+      const profileComplete = !!(
+        profile.sleep_preference &&
+        profile.assignment_style &&
+        profile.campus_frequency &&
+        profile.meeting_preference &&
+        profile.living_situation &&
+        profile.schedule?.length > 0
+      );
+
+      setDolphinMsg(profileComplete
+        ? 'Click on me to find new buddies!'
+        : 'Finish your profile to find better buddies!'
+      );
+
       setMyClasses(classes.map((c: any, i: number) => ({
-        id: c.id,  // real UUID now
+        id: c.id,
         name: `${c.course_code}${c.name ? ' - ' + c.name : ''}`,
         color: CLASS_COLORS[i % CLASS_COLORS.length],
       })));
@@ -112,14 +131,24 @@ const createAndAddClass = async () => {
   return (
     <ThemedView style={[styles.container, { backgroundColor: dark ? '#121212' : '#4466c9' }]}>
       {/* Header */}
-      <ThemedView style={[styles.header, { paddingTop: insets.top }, , { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
+      <ThemedView style={[styles.header, { paddingTop: insets.top }, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
         <TouchableOpacity onPress={() => router.push('/profile')}>
           <IconSymbol name="person.circle.fill" size={48} color='#fff' />
         </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
-          style={{ width: 60, height: 60 }}
-        />
+        <View style={styles.dolphinContainer}>
+          {dolphinMsg ? (
+            <View style={styles.speechBubble}>
+              <ThemedText style={styles.speechText}>{dolphinMsg}</ThemedText>
+              <View style={styles.speechTail} />
+            </View>
+          ) : null}
+          <TouchableOpacity onPress={() => router.push('/recommendations' as any)}>
+            <Image
+              source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+              style={{ width: 60, height: 60 }}
+            />
+          </TouchableOpacity>
+        </View>
       </ThemedView>
 
       <ThemedText type="title" style={styles.title}>My Classes:</ThemedText>
@@ -229,6 +258,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     backgroundColor: '#32a85e',
     marginBottom: 20,
+  },
+  dolphinContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  speechBubble: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    maxWidth: 300,
+    marginRight: 8,
+    position: 'relative',
+  },
+  speechText: {
+    color: '#000000',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  speechTail: {
+    position: 'absolute',
+    right: -8,
+    top: '50%',
+    marginTop: -6,
+    width: 0,
+    height: 0,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftWidth: 8,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: '#ffffff',
   },
   addButton: {
     backgroundColor: '#32a85e',
