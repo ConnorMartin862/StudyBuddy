@@ -6,8 +6,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Image } from 'expo-image';
-import { logout } from '@/utils/api';
+import { logout, savePushToken } from '@/utils/api';
 import { useTheme } from '@/context/theme';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 
 const SETTINGS = [
   { id: '1', name: 'Push Notifications' },
@@ -29,10 +32,32 @@ export default function SettingsScreen() {
     Object.fromEntries(SETTINGS.map((s) => [s.id, s.id === '2' ? dark : false]))
   );
 
-  const handleToggle = (id: string) => {
+  const handleToggle = async (id: string) => {
     if (id === '2') {
       toggleDark();
       setToggles((prev) => ({ ...prev, [id]: !prev[id] }));
+    } else if (id === '1') {
+      const newVal = !toggles[id];
+      setToggles((prev) => ({ ...prev, [id]: newVal }));
+      if (newVal) {
+        // Turning on — request permission and save token
+        if (!Device.isDevice || Platform.OS === 'web') return;
+        const { status: existing } = await Notifications.getPermissionsAsync();
+        let finalStatus = existing;
+        if (existing !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') {
+          setToggles((prev) => ({ ...prev, [id]: false }));
+          return;
+        }
+        const token = (await Notifications.getExpoPushTokenAsync()).data;
+        await savePushToken(token).catch(() => {});
+      } else {
+        // Turning off — clear token
+        await savePushToken('').catch(() => {});
+      }
     } else {
       setToggles((prev) => ({ ...prev, [id]: !prev[id] }));
     }

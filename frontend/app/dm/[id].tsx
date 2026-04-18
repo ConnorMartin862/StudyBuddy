@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, SafeAreaView, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useAuth } from '@/context/auth';
 import { useTheme } from '@/context/theme';
 import { getMessages, sendMessage } from '@/utils/api';
@@ -91,66 +91,71 @@ export default function DMScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: dark ? '#121212' : C.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: dark ? '#121212' : C.headerBg }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backTxt}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerName}>{name}</Text>
-        <View style={{ width: 60 }} />
-      </View>
-
-      {/* Messages */}
-      {loading ? (
-        <ActivityIndicator color={C.white} style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={item => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          ListEmptyComponent={
-            <Text style={styles.empty}>No messages yet — say hi!</Text>
-          }
-        />
-      )}
-
-      {/* Input */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[
-          styles.inputRow,
-          {
-            backgroundColor: dark ? '#1e1e1e' : C.card,
-            borderTopColor: dark ? 'rgba(255,255,255,0.1)' : C.border,
-          }
-        ]}>
-          <TextInput
-            style={[
-              styles.input,
-              { backgroundColor: dark ? '#2a2a2e' : '#3a3a3e' }
-            ]}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Message..."
-            placeholderTextColor={C.textSec}
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, !input.trim() && { opacity: 0.4 }]}
-            onPress={handleSend}
-            disabled={!input.trim() || sending}
-          >
-            {sending
-              ? <ActivityIndicator color={C.white} size="small" />
-              : <Text style={styles.sendTxt}>Send</Text>
-            }
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={[styles.safe, { backgroundColor: dark ? '#121212' : C.bg }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: dark ? '#121212' : C.headerBg }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backTxt}>← Back</Text>
           </TouchableOpacity>
+          <Text style={styles.headerName}>{name}</Text>
+          <View style={{ width: 60 }} />
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+        {/* Messages + Input */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {loading ? (
+            <ActivityIndicator color={C.white} style={{ marginTop: 40 }} />
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={item => item.id}
+              renderItem={renderMessage}
+              contentContainerStyle={styles.messageList}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+              ListEmptyComponent={
+                <Text style={styles.empty}>No messages yet — say hi!</Text>
+              }
+            />
+          )}
+
+          <View style={[
+            styles.inputRow,
+            {
+              backgroundColor: dark ? '#1e1e1e' : C.card,
+              borderTopColor: dark ? 'rgba(255,255,255,0.1)' : C.border,
+            }
+          ]}>
+            <TextInput
+              style={[
+                styles.input,
+                { backgroundColor: dark ? '#2a2a2e' : '#3a3a3e' }
+              ]}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Message..."
+              placeholderTextColor={C.textSec}
+              multiline
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, !input.trim() && { opacity: 0.4 }]}
+              onPress={handleSend}
+              disabled={!input.trim() || sending}
+            >
+              {sending
+                ? <ActivityIndicator color={C.white} size="small" />
+                : <Text style={styles.sendTxt}>Send</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
   );
 }
 

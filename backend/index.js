@@ -355,6 +355,47 @@ app.get('/pushes/matches', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/pushes/:toUserId', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      'INSERT INTO pushes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.user.id, req.params.toUserId]
+    );
+
+    // Get sender name and recipient push token
+    const senderResult = await pool.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+    const senderName = senderResult.rows[0]?.name;
+    const recipientResult = await pool.query('SELECT push_token FROM users WHERE id = $1', [req.params.toUserId]);
+    const pushToken = recipientResult.rows[0]?.push_token;
+
+    // Check if this is a mutual match
+    const matchCheck = await pool.query(
+      'SELECT * FROM pushes WHERE from_user_id = $1 AND to_user_id = $2',
+      [req.params.toUserId, req.user.id]
+    );
+    const isMatch = matchCheck.rows.length > 0;
+
+    if (pushToken) {
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: pushToken,
+          title: isMatch ? '🎉 New Match!' : '👋 New Study Request',
+          body: isMatch
+            ? `You and ${senderName} are now matched!`
+            : `${senderName} wants to study with you!`,
+          sound: 'default',
+        }),
+      });
+    }
+
+    res.json({ message: 'Pushed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Thread routes ─────────────────────────────────────────────────────────────
 
 // Get threads for a class (with top comment + slap count)
