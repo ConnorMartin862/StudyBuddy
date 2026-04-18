@@ -196,6 +196,11 @@ export async function getRecentMessages() {
   return await request('GET', '/messages/recent');
 }
 
+// ── Search ────────────────────────────────────────────────────────────────────
+export async function searchUsers(q: string) {
+  return await request('GET', `/users/search?q=${encodeURIComponent(q)}`);
+}
+
 export async function syncEnrollments() {
   try {
     const [profile, allClasses] = await Promise.all([getMyProfile(), getAllClasses()]);

@@ -1,10 +1,10 @@
-import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getMatches, getSentPushes, getReceivedPushes, pushStudent, getRecentMessages } from '@/utils/api';
+import { getMatches, getSentPushes, getReceivedPushes, pushStudent, getRecentMessages, searchUsers } from '@/utils/api';
 import { useTheme } from '@/context/theme';
 import { Image } from 'expo-image';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -20,6 +20,9 @@ export default function MatchesScreen() {
   const [sent,     setSent]     = useState<Person[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [matchingId, setMatchingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; username: string; status: string }[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -73,6 +76,46 @@ export default function MatchesScreen() {
       setMatchingId(null);
     }
   };
+
+  const handleSearch = async (text: string) => {
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const results = await searchUsers(text);
+      setSearchResults(results);
+    } catch (e) {
+      console.error('Search failed', e);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const SearchResultCard = ({ id, name, username, status }: { id: string; name: string; username: string; status: string }) => (
+    <TouchableOpacity
+      style={[styles.card, dark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
+      onPress={() => router.push(`/student/${id}`)}
+    >
+      <View style={[
+        styles.avatar,
+        status === 'matched' && styles.matchedAvatar,
+        status === 'pushed' && styles.sentAvatar,
+        status === 'incoming' && { backgroundColor: '#1565c0' },
+      ]}>
+        <ThemedText style={styles.avatarText}>{name[0]}</ThemedText>
+      </View>
+      <View style={{ flex: 1 }}>
+        <ThemedText style={styles.name}>{name}</ThemedText>
+        <ThemedText style={{ color: '#aaaaaa', fontSize: 12 }}>@{username}</ThemedText>
+      </View>
+      {status === 'matched' && <View style={styles.matchedTag}><ThemedText style={styles.tagTxt}>Matched</ThemedText></View>}
+      {status === 'pushed' && <View style={styles.sentTag}><ThemedText style={styles.tagTxt}>Requested</ThemedText></View>}
+      {status === 'incoming' && <View style={[styles.matchedTag, { backgroundColor: '#1565c0' }]}><ThemedText style={styles.tagTxt}>Incoming</ThemedText></View>}
+    </TouchableOpacity>
+  );
 
   const IncomingCard = ({ id, name }: Person) => (
     <TouchableOpacity
@@ -152,6 +195,28 @@ export default function MatchesScreen() {
         />
       </View>
       <ThemedText type="title" style={styles.title}>Matches:</ThemedText>
+      
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search users..."
+          placeholderTextColor="#aaaaaa"
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+        {searching && <ActivityIndicator color="#fff" style={{ marginLeft: 8 }} />}
+      </View>
+
+      {/* Search results */}
+      {searchQuery.trim().length > 0 && (
+        <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
+          {searchResults.length === 0 && !searching
+            ? <ThemedText style={styles.empty}>No users found.</ThemedText>
+            : searchResults.map(r => <SearchResultCard key={r.id} {...r} />)
+          }
+        </View>
+      )}
 
       <FlatList
         data={[]}
@@ -230,6 +295,21 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 14,
     marginBottom: 10,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: '#1c1c1e',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#ffffff',
+    fontSize: 15,
   },
   avatar: {
     width: 40,
