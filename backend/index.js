@@ -16,6 +16,23 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+const rateLimit = require('express-rate-limit');
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts, please try again later.' }
+});
+
+app.use(limiter);
+
 // ── Auth middleware ───────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -51,7 +68,7 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
