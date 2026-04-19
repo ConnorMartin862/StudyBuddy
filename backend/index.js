@@ -1,3 +1,5 @@
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
@@ -867,6 +869,40 @@ app.delete('/users/me', requireAuth, async (req, res) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
     res.json({ message: 'Account deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/reports/:userId', requireAuth, async (req, res) => {
+  const { reason } = req.body;
+  try {
+    await pool.query(
+      'INSERT INTO reports (reporter_id, reported_id, reason) VALUES ($1, $2, $3)',
+      [req.user.id, req.params.userId, reason]
+    );
+
+    // Get reporter and reported user info
+    const reporterResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
+    const reportedResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.userId]);
+    const reporter = reporterResult.rows[0];
+    const reported = reportedResult.rows[0];
+
+    // Send email notification
+    await resend.emails.send({
+      from: 'StudyBuddy <onboarding@resend.dev>',
+      to: 'YOUR_GMAIL_HERE@gmail.com',
+      subject: 'New User Report Submitted',
+      html: `
+        <h2>New Report Submitted</h2>
+        <p><strong>Reporter:</strong> ${reporter.name} (${reporter.email})</p>
+        <p><strong>Reported User:</strong> ${reported.name} (${reported.email})</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+      `,
+    });
+
+    res.json({ message: 'Report submitted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
