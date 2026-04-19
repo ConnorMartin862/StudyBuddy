@@ -889,7 +889,7 @@ app.post('/reports/:userId', requireAuth, async (req, res) => {
     const reported = reportedResult.rows[0];
 
     // Send email notification
-    await resend.emails.send({
+    const emailResult = await resend.emails.send({
       from: 'StudyBuddy <onboarding@resend.dev>',
       to: 'studybuddy.support.team@gmail.com',
       subject: 'New User Report Submitted',
@@ -901,6 +901,7 @@ app.post('/reports/:userId', requireAuth, async (req, res) => {
         <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
       `,
     });
+    console.log('Resend result:', JSON.stringify(emailResult));
 
     res.json({ message: 'Report submitted' });
   } catch (err) {
