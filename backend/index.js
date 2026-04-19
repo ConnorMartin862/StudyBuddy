@@ -891,7 +891,7 @@ app.post('/reports/:userId', requireAuth, async (req, res) => {
     // Send email notification
     await resend.emails.send({
       from: 'StudyBuddy <onboarding@resend.dev>',
-      to: 'YOUR_GMAIL_HERE@gmail.com',
+      to: 'studybuddy.support.team@gmail.com',
       subject: 'New User Report Submitted',
       html: `
         <h2>New Report Submitted</h2>
