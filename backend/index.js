@@ -1,8 +1,9 @@
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
+
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const express = require('express');
 const cors    = require('cors');
 const { Pool } = require('pg');
