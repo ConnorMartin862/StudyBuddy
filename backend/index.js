@@ -100,6 +100,8 @@ app.get('/users/search', requireAuth, async (req, res) => {
       FROM users u
       WHERE u.id != $2
         AND GREATEST(similarity(u.name, $1), similarity(u.username, $1)) > 0.15
+        AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = $2 AND blocked_id = u.id)
+        AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = u.id AND blocked_id = $2)
       ORDER BY best_sim DESC
       LIMIT 20
     `, [q, req.user.id]);
@@ -233,8 +235,10 @@ app.get('/classes/:id', requireAuth, async (req, res) => {
     const studentsResult = await pool.query(
       `SELECT u.id, u.name, u.email FROM users u
        JOIN enrollments e ON e.user_id = u.id
-       WHERE e.class_id = $1`,
-      [req.params.id]
+       WHERE e.class_id = $1
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = $2 AND blocked_id = u.id)
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = u.id AND blocked_id = $2)`,
+      [req.params.id, req.user.id]
     );
     res.json({ ...classResult.rows[0], students: studentsResult.rows });
   } catch (err) {
@@ -792,6 +796,8 @@ app.get('/recommendations', requireAuth, async (req, res) => {
           SELECT 1 FROM pushes 
           WHERE from_user_id = $1 AND to_user_id = u.id
         )
+        AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = u.id)
+        AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = u.id AND blocked_id = $1)
       ORDER BY c.score DESC
     `, [userId, myClasses]);
 
