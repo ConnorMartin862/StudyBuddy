@@ -60,6 +60,8 @@ export default function ScheduleScreen() {
   const [trimmed,  setTrimmed]  = useState(false);
 
   const blocksRef = React.useRef<Block[]>([]);
+  const gridRef   = React.useRef<View>(null);
+  const gridY     = React.useRef(0);
 
   const hours = trimmed ? TRIM_HOURS : ALL_HOURS;
   const cellHeight = 28;
@@ -86,12 +88,11 @@ export default function ScheduleScreen() {
 
   const handleCellPress = (day: number, hour: number) => {
     const prev = blocksRef.current;
-    const exists = prev.find(b => b.day === day && b.hour === hour);
     let next;
     if (tool === 'erase') {
-        next = prev.filter(b => !(b.day === day && b.hour === hour));
+      next = prev.filter(b => !(b.day === day && b.hour === hour));
     } else {
-        next = [...prev.filter(b => !(b.day === day && b.hour === hour)), { day, hour, color: tool }];
+      next = [...prev.filter(b => !(b.day === day && b.hour === hour)), { day, hour, color: tool }];
     }
     blocksRef.current = next;
   };
@@ -107,7 +108,16 @@ export default function ScheduleScreen() {
     return { day, hour };
   };
 
-  const gridY = React.useRef(0);
+  const getGridOffset = (): number => {
+    if (Platform.OS === 'web') {
+      const el = (gridRef.current as any);
+      if (el && el.getBoundingClientRect) {
+        return el.getBoundingClientRect().top + window.scrollY;
+      }
+      return 0;
+    }
+    return gridY.current;
+  };
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -115,12 +125,14 @@ export default function ScheduleScreen() {
     onPanResponderGrant: (e) => {
       blocksRef.current = [...blocks];
       const { pageX, pageY } = e.nativeEvent;
-      const cell = getCellFromPosition(pageX, pageY - gridY.current);
+      const offset = getGridOffset();
+      const cell = getCellFromPosition(pageX, pageY - offset);
       if (cell) handleCellPress(cell.day, cell.hour);
     },
     onPanResponderMove: (e) => {
       const { pageX, pageY } = e.nativeEvent;
-      const cell = getCellFromPosition(pageX, pageY - gridY.current);
+      const offset = getGridOffset();
+      const cell = getCellFromPosition(pageX, pageY - offset);
       if (cell) handleCellPress(cell.day, cell.hour);
     },
     onPanResponderRelease: () => {
@@ -137,13 +149,10 @@ export default function ScheduleScreen() {
     }
   };
 
-
-
   const handleCancel = () => {
     setBlocks(original);
     router.back();
   };
-
 
   if (loading) {
     return (
@@ -198,12 +207,11 @@ export default function ScheduleScreen() {
           </View>
           {/* Body with pan responder */}
           <View
+              ref={gridRef}
               style={sg.body}
               {...panResponder.panHandlers}
               onLayout={(e) => {
-                if (Platform.OS === 'web') {
-                  gridY.current = e.nativeEvent.layout.y;
-                } else {
+                if (Platform.OS !== 'web') {
                   e.target.measure((_x, _y, _w, _h, _px, py) => {
                     gridY.current = py;
                   });
