@@ -883,26 +883,28 @@ app.post('/reports/:userId', requireAuth, async (req, res) => {
       [req.user.id, req.params.userId, reason]
     );
 
-    // Get reporter and reported user info
     const reporterResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
     const reportedResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.userId]);
     const reporter = reporterResult.rows[0];
     const reported = reportedResult.rows[0];
 
-    // Send email notification
-    const emailResult = await resend.emails.send({
-      from: 'StudyBuddy <onboarding@resend.dev>',
-      to: 'studybuddy.support.team@gmail.com',
-      subject: 'New User Report Submitted',
-      html: `
-        <h2>New Report Submitted</h2>
-        <p><strong>Reporter:</strong> ${reporter.name} (${reporter.email})</p>
-        <p><strong>Reported User:</strong> ${reported.name} (${reported.email})</p>
-        <p><strong>Reason:</strong> ${reason}</p>
-        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-      `,
-    });
-    console.log('Resend result:', JSON.stringify(emailResult));
+    try {
+      const emailResult = await resend.emails.send({
+        from: 'StudyBuddy <onboarding@resend.dev>',
+        to: 'studybuddy.support.team@gmail.com',
+        subject: 'New User Report Submitted',
+        html: `
+          <h2>New Report Submitted</h2>
+          <p><strong>Reporter:</strong> ${reporter.name} (${reporter.email})</p>
+          <p><strong>Reported User:</strong> ${reported.name} (${reported.email})</p>
+          <p><strong>Reason:</strong> ${reason}</p>
+          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        `,
+      });
+      console.log('Resend result:', JSON.stringify(emailResult));
+    } catch (emailErr) {
+      console.error('Resend error:', JSON.stringify(emailErr));
+    }
 
     res.json({ message: 'Report submitted' });
   } catch (err) {
