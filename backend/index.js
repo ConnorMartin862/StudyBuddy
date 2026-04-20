@@ -395,7 +395,9 @@ app.get('/pushes/sent', requireAuth, async (req, res) => {
     const result = await pool.query(
       `SELECT u.id, u.name, u.email FROM users u
        JOIN pushes p ON p.to_user_id = u.id
-       WHERE p.from_user_id = $1`,
+       WHERE p.from_user_id = $1
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = u.id)
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = u.id AND blocked_id = $1)`,
       [req.user.id]
     );
     res.json(result.rows);
@@ -409,7 +411,9 @@ app.get('/pushes/received', requireAuth, async (req, res) => {
     const result = await pool.query(
       `SELECT u.id, u.name, u.email FROM users u
        JOIN pushes p ON p.from_user_id = u.id
-       WHERE p.to_user_id = $1`,
+       WHERE p.to_user_id = $1
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = u.id)
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = u.id AND blocked_id = $1)`,
       [req.user.id]
     );
     res.json(result.rows);
