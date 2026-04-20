@@ -878,16 +878,19 @@ app.delete('/users/me', requireAuth, async (req, res) => {
 
 app.post('/reports/:userId', requireAuth, async (req, res) => {
   const { reason } = req.body;
+  console.log('Report endpoint hit, reason:', reason, 'reported:', req.params.userId);
   try {
     await pool.query(
       'INSERT INTO reports (reporter_id, reported_id, reason) VALUES ($1, $2, $3)',
       [req.user.id, req.params.userId, reason]
     );
+    console.log('Report saved to DB');
 
     const reporterResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
     const reportedResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.userId]);
     const reporter = reporterResult.rows[0];
     const reported = reportedResult.rows[0];
+    console.log('Reporter:', reporter?.name, 'Reported:', reported?.name);
 
     try {
       const emailResult = await resend.emails.send({
@@ -909,6 +912,7 @@ app.post('/reports/:userId', requireAuth, async (req, res) => {
 
     res.json({ message: 'Report submitted' });
   } catch (err) {
+    console.error('Report endpoint error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
