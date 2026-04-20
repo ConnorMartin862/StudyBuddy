@@ -54,6 +54,20 @@ app.get('/', (req, res) => {
   res.json({ message: 'StudyBuddy API is running!' });
 });
 
+app.get('/test-email', requireAuth, async (req, res) => {
+  try {
+    const result = await resend.emails.send({
+      from: 'StudyBuddy <onboarding@resend.dev>',
+      to: 'studybuddy.support.team@gmail.com',
+      subject: 'Test from Railway',
+      html: '<p>Test email from Railway</p>',
+    });
+    res.json({ result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
 app.post('/auth/register', async (req, res) => {
