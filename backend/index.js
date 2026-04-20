@@ -18,6 +18,7 @@ const pool = new Pool({
 
 app.use(cors());
 app.use(express.json());
+app.set('trust proxy', 1);
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const rateLimit = require('express-rate-limit');
