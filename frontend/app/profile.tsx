@@ -245,44 +245,63 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This will permanently erase all your data including your profile, classes, matches, and messages. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete My Account',
-          style: 'destructive',
-          onPress: () => {
-            // Second confirmation
-            Alert.alert(
-              'Are you absolutely sure?',
-              `Your account "${name}" and all associated data will be permanently deleted.`,
-              [
-                { text: 'Go Back', style: 'cancel' },
-                {
-                  text: 'Yes, Delete Everything',
-                  style: 'destructive',
-                  onPress: async () => {
-                    setDeleting(true);
-                    try {
-                      await deleteAccount();
-                      await logout();
-                      router.replace('/login');
-                    } catch (e) {
-                      console.error('Failed to delete account', e);
-                      setDeleting(false);
-                      Alert.alert('Error', 'Failed to delete account. Please try again.');
-                    }
+  const handleDeleteAccount = async () => {
+    const message = 'Are you sure you want to delete your account? This will permanently erase all your data including your profile, classes, matches, and messages. This cannot be undone.';
+    const message2 = `Your account "${name}" and all associated data will be permanently deleted. Are you absolutely sure?`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(message);
+      if (!confirmed) return;
+      const doubleConfirmed = window.confirm(message2);
+      if (!doubleConfirmed) return;
+      setDeleting(true);
+      try {
+        await deleteAccount();
+        await logout();
+        router.replace('/login');
+      } catch (e) {
+        console.error('Failed to delete account', e);
+        setDeleting(false);
+        window.alert('Failed to delete account. Please try again.');
+      }
+    } else {
+      Alert.alert(
+        'Delete Account',
+        message,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete My Account',
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert(
+                'Are you absolutely sure?',
+                message2,
+                [
+                  { text: 'Go Back', style: 'cancel' },
+                  {
+                    text: 'Yes, Delete Everything',
+                    style: 'destructive',
+                    onPress: async () => {
+                      setDeleting(true);
+                      try {
+                        await deleteAccount();
+                        await logout();
+                        router.replace('/login');
+                      } catch (e) {
+                        console.error('Failed to delete account', e);
+                        setDeleting(false);
+                        Alert.alert('Error', 'Failed to delete account. Please try again.');
+                      }
+                    },
                   },
-                },
-              ]
-            );
+                ]
+              );
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (loading) {
@@ -310,8 +329,8 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bg }]}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <View style={[s.header, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>        
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backTxt}>← Back</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/recommendations' as any)}>

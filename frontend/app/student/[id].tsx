@@ -13,9 +13,11 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useAuth } from '@/context/auth';
 import { getPushStatus, pushStudent, unpushStudent, getCompatibility, getMyProfile, blockUser, unblockUser, reportUser, getBlocks } from '@/utils/api';
+import { Image } from 'expo-image';
+import { useTheme } from '@/context/theme';
 
 const C = {
   headerBg: '#1565c0',
@@ -94,8 +96,10 @@ function ScheduleGrid({ blocks }: { blocks: ScheduleCell[] }) {
 }
 
 export default function StudentProfileScreen() {
+  const { dark } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
+  const { width } = useWindowDimensions();
   const router = useRouter();
 
   const [student, setStudent] = useState<Student | null>(null);
@@ -121,22 +125,35 @@ export default function StudentProfileScreen() {
   };
 
   const handleBlock = async () => {
-    const confirmed = window.confirm(
-      blocked
-        ? `Unblock ${student?.name}? They will be able to see your profile again.`
-        : `Block ${student?.name}? They won't be able to see your profile or message you.`
-    );
-    if (!confirmed) return;
-    try {
-      if (blocked) {
-        await unblockUser(id);
-        setBlocked(false);
-      } else {
-        await blockUser(id);
-        setBlocked(true);
-      }
-    } catch (e) {
-      console.error('Block failed', e);
+    const message = blocked
+      ? `Unblock ${student?.name}? They will be able to see your profile again.`
+      : `Block ${student?.name}? They won't be able to see your profile or message you.`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(message);
+      if (!confirmed) return;
+      try {
+        if (blocked) { await unblockUser(id); setBlocked(false); }
+        else { await blockUser(id); setBlocked(true); }
+      } catch (e) { console.error('Block failed', e); }
+    } else {
+      Alert.alert(
+        blocked ? 'Unblock User' : 'Block User',
+        message,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: blocked ? 'Unblock' : 'Block',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                if (blocked) { await unblockUser(id); setBlocked(false); }
+                else { await blockUser(id); setBlocked(true); }
+              } catch (e) { console.error('Block failed', e); }
+            },
+          },
+        ]
+      );
     }
   };
 
@@ -196,16 +213,16 @@ export default function StudentProfileScreen() {
         }
 
         const me = await getMyProfile();
-        const myBlocks: ScheduleCell[] = me.schedule ?? [];
+        const mySchedule: ScheduleCell[] = me.schedule ?? [];
         const theirBlocks: ScheduleCell[] = Array.isArray(data.schedule) ? data.schedule : [];
         const combined: ScheduleCell[] = [];
         theirBlocks.forEach(b => {
           if (b.color === 'green') {
-            const iAlsoGreen = myBlocks.some(m => m.day === b.day && m.hour === b.hour && m.color === 'green');
+            const iAlsoGreen = mySchedule.some(m => m.day === b.day && m.hour === b.hour && m.color === 'green');
             if (iAlsoGreen) combined.push({ day: b.day, hour: b.hour, color: 'green' });
           }
         });
-        const allBlocks = [...myBlocks, ...theirBlocks];
+        const allBlocks = [...mySchedule, ...theirBlocks];
         allBlocks.forEach(b => {
           if (b.color === 'red') {
             const alreadyAdded = combined.some(c => c.day === b.day && c.hour === b.hour);
@@ -222,16 +239,22 @@ export default function StudentProfileScreen() {
   }, [id, token]);
 
   if (loading) return (
-    <SafeAreaView style={s.safeCenter}>
-      <ActivityIndicator size="large" color="#ffffff" />
-      <Text style={s.statusText}>Loading profile...</Text>
-    </SafeAreaView>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={s.safeCenter}>
+        <ActivityIndicator size="large" color="#ffffff" />
+        <Text style={s.statusText}>Loading profile...</Text>
+      </SafeAreaView>
+    </>
   );
 
   if (error && !student) return (
-    <SafeAreaView style={s.safeCenter}>
-      <Text style={s.statusText}>{error}</Text>
-    </SafeAreaView>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={s.safeCenter}>
+        <Text style={s.statusText}>{error}</Text>
+      </SafeAreaView>
+    </>
   );
 
   const currentStudent = student ?? FALLBACK;
@@ -247,128 +270,148 @@ export default function StudentProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.header}>
-        <View style={s.avatarRing}>
-          <View style={s.avatar}>
-            <Text style={s.avatarInitial}>{currentStudent.name?.[0]?.toUpperCase() || '?'}</Text>
-          </View>
-        </View>
-        <Text style={s.name}>{currentStudent.name}</Text>
-        <Text style={s.email}>{currentStudent.email}</Text>
-        {score !== null && <Text style={s.scoreText}>{score}% Match</Text>}
-
-        {pushLoading ? (
-          <ActivityIndicator color={C.white} style={{ marginTop: 12 }} />
-        ) : pushStatus === 'matched' ? (
-          <View style={s.matchedBtn}>
-            <Text style={s.matchedTxt}>✓ Matched</Text>
-          </View>
-        ) : (
-          <TouchableOpacity style={pushStatus === 'pushed' ? s.pushedBtn : s.matchBtn} onPress={handlePush}>
-            <Text style={s.matchBtnTxt}>{pushStatus === 'pushed' ? 'Pending — Undo' : 'Match'}</Text>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={[s.safe, { backgroundColor: dark ? '#000000' : C.bg }]}>
+        {/* Top bar - outside ScrollView */}
+        <View style={[s.topBar, { backgroundColor: dark ? '#1565c0' : '#32a85e' }]}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Text style={s.backTxt}>← Back</Text>
           </TouchableOpacity>
-        )}
-
-        <View style={s.actionRow}>
-          <TouchableOpacity style={[s.actionBtn, blocked && s.actionBtnActive]} onPress={handleBlock}>
-            <Text style={s.actionBtnTxt}>{blocked ? '🚫 Blocked' : 'Block'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.actionBtn} onPress={() => setReportVisible(true)}>
-            <Text style={s.actionBtnTxt}>Report</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <Text style={s.cardTitle}>Preferences</Text>
-          </View>
-          {[
-            { label: 'Sleep Schedule', value: currentStudent.sleep_preference },
-            { label: 'Assignments', value: currentStudent.assignment_style },
-            { label: 'On Campus', value: currentStudent.campus_frequency },
-            { label: 'Meeting', value: currentStudent.meeting_preference },
-            { label: 'Lives', value: currentStudent.living_situation },
-          ].filter(item => item.value).map(({ label, value }) => (
-            <View key={label} style={s.prefRow}>
-              <View style={s.bullet} />
-              <Text style={[s.prefText, { color: C.textSec, flex: 0, marginRight: 8 }]}>{label}:</Text>
-              <Text style={s.prefText}>{STUDY_PREF_LABELS[value!] ?? value}</Text>
-            </View>
-          ))}
-          {prefs.length > 0 && prefs.map((p, i) => (
-            <View key={i} style={s.prefRow}>
-              <View style={s.bullet} />
-              <Text style={s.prefText}>{p}</Text>
-            </View>
-          ))}
-          {!currentStudent.sleep_preference && !currentStudent.assignment_style && prefs.length === 0 && (
-            <Text style={s.empty}>No preferences listed.</Text>
-          )}
-        </View>
-
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <Text style={s.cardTitle}>Schedule</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 10 }}>
-            <ScheduleGrid blocks={combinedBlocks} />
-          </ScrollView>
-        </View>
-
-        <View style={[s.card, { marginBottom: 32 }]}>
-          <View style={s.cardHeader}>
-            <Text style={s.cardTitle}>Classes</Text>
-          </View>
-          <View style={s.chipWrap}>
-            {classes.length === 0 ? (
-              <Text style={s.empty}>No classes listed.</Text>
-            ) : (
-              classes.map((c, i) => (
-                <View key={i} style={s.chip}>
-                  <Text style={s.chipText}>{c}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
-      </ScrollView>
-
-      <Modal visible={reportVisible} transparent animationType="fade">
-        <View style={m.overlay}>
-          <View style={m.sheet}>
-            <Text style={m.title}>Report {currentStudent.name}</Text>
-            <Text style={m.subtitle}>Please describe the issue. Your report will be reviewed by our team.</Text>
-            <TextInput
-              style={m.input}
-              value={reportReason}
-              onChangeText={setReportReason}
-              placeholder="e.g. Inappropriate messages, harassment..."
-              placeholderTextColor="#888"
-              multiline
-              autoFocus
+          <TouchableOpacity onPress={() => router.push('/recommendations' as any)}>
+            <Image
+              source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+              style={{ width: 60, height: 60 }}
             />
-            <View style={m.row}>
-              <TouchableOpacity style={m.cancel} onPress={() => { setReportVisible(false); setReportReason(''); }}>
-                <Text style={m.cancelTxt}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Avatar header */}
+          <View style={[s.header, { backgroundColor: dark ? '#121212' : C.headerBg }]}>
+            <View style={s.avatarRing}>
+              <View style={s.avatar}>
+                <Text style={s.avatarInitial}>{currentStudent.name?.[0]?.toUpperCase() || '?'}</Text>
+              </View>
+            </View>
+            <Text style={s.name}>{currentStudent.name}</Text>
+            <Text style={s.email}>{currentStudent.email}</Text>
+            {score !== null && <Text style={s.scoreText}>{score}% Match</Text>}
+
+            {pushLoading ? (
+              <ActivityIndicator color={C.white} style={{ marginTop: 12 }} />
+            ) : pushStatus === 'matched' ? (
+              <View style={s.matchedBtn}>
+                <Text style={s.matchedTxt}>✓ Matched</Text>
+              </View>
+            ) : (
+              <TouchableOpacity style={pushStatus === 'pushed' ? s.pushedBtn : s.matchBtn} onPress={handlePush}>
+                <Text style={s.matchBtnTxt}>{pushStatus === 'pushed' ? 'Pending — Undo' : 'Match'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[m.submit, (!reportReason.trim() || reportSending) && { opacity: 0.4 }]}
-                onPress={handleReport}
-                disabled={!reportReason.trim() || reportSending}
-              >
-                {reportSending
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={m.submitTxt}>Submit</Text>
-                }
+            )}
+
+            <View style={s.actionRow}>
+              <TouchableOpacity style={[s.actionBtn, blocked && s.actionBtnActive]} onPress={handleBlock}>
+                <Text style={s.actionBtnTxt}>{blocked ? '🚫 Blocked' : 'Block'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.actionBtn} onPress={() => setReportVisible(true)}>
+                <Text style={s.actionBtnTxt}>Report</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+
+          {/* Cards */}
+          <View style={[s.scroll, { backgroundColor: dark ? '#000000' : C.bg }]}>
+            <View style={s.card}>
+              <View style={s.cardHeader}>
+                <Text style={s.cardTitle}>Preferences</Text>
+              </View>
+              {[
+                { label: 'Sleep Schedule', value: currentStudent.sleep_preference },
+                { label: 'Assignments', value: currentStudent.assignment_style },
+                { label: 'On Campus', value: currentStudent.campus_frequency },
+                { label: 'Meeting', value: currentStudent.meeting_preference },
+                { label: 'Lives', value: currentStudent.living_situation },
+              ].filter(item => item.value).map(({ label, value }) => (
+                <View key={label} style={s.prefRow}>
+                  <View style={s.bullet} />
+                  <Text style={[s.prefText, { color: C.textSec, flex: 0, marginRight: 8 }]}>{label}:</Text>
+                  <Text style={s.prefText}>{STUDY_PREF_LABELS[value!] ?? value}</Text>
+                </View>
+              ))}
+              {prefs.length > 0 && prefs.map((p, i) => (
+                <View key={i} style={s.prefRow}>
+                  <View style={s.bullet} />
+                  <Text style={s.prefText}>{p}</Text>
+                </View>
+              ))}
+              {!currentStudent.sleep_preference && !currentStudent.assignment_style && prefs.length === 0 && (
+                <Text style={s.empty}>No preferences listed.</Text>
+              )}
+            </View>
+
+            <View style={s.card}>
+              <View style={s.cardHeader}>
+                <Text style={s.cardTitle}>Schedule</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 10 }}>
+                <ScheduleGrid blocks={combinedBlocks} />
+              </ScrollView>
+            </View>
+
+            <View style={[s.card, { marginBottom: 32 }]}>
+              <View style={s.cardHeader}>
+                <Text style={s.cardTitle}>Classes</Text>
+              </View>
+              <View style={s.chipWrap}>
+                {classes.length === 0 ? (
+                  <Text style={s.empty}>No classes listed.</Text>
+                ) : (
+                  classes.map((c, i) => (
+                    <View key={i} style={s.chip}>
+                      <Text style={s.chipText}>{c}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        <Modal visible={reportVisible} transparent animationType="fade">
+          <View style={m.overlay}>
+            <View style={m.sheet}>
+              <Text style={m.title}>Report {currentStudent.name}</Text>
+              <Text style={m.subtitle}>Please describe the issue. Your report will be reviewed by our team.</Text>
+              <TextInput
+                style={m.input}
+                value={reportReason}
+                onChangeText={setReportReason}
+                placeholder="e.g. Inappropriate messages, harassment..."
+                placeholderTextColor="#888"
+                multiline
+                autoFocus
+              />
+              <View style={m.row}>
+                <TouchableOpacity style={m.cancel} onPress={() => { setReportVisible(false); setReportReason(''); }}>
+                  <Text style={m.cancelTxt}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[m.submit, (!reportReason.trim() || reportSending) && { opacity: 0.4 }]}
+                  onPress={handleReport}
+                  disabled={!reportReason.trim() || reportSending}
+                >
+                  {reportSending
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={m.submitTxt}>Submit</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -385,11 +428,21 @@ const sg = StyleSheet.create({
 });
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1 },  
   safeCenter: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   statusText: { color: C.white, marginTop: 12, fontSize: 14 },
   scroll: { padding: 16, paddingTop: 8 },
-  header: { backgroundColor: C.headerBg, alignItems: 'center', paddingTop: 24, paddingBottom: 20 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    minWidth: '100%',
+    alignSelf: 'stretch',
+  },
+  backBtn: { paddingRight: 10 },
+  backTxt: { color: C.white, fontSize: 16, fontWeight: '600' },
+  header: { alignItems: 'center', paddingTop: 24, paddingBottom: 20 },
   avatarRing: { width: 76, height: 76, borderRadius: 38, borderWidth: 3, borderColor: C.white, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   avatar: { width: 66, height: 66, borderRadius: 33, backgroundColor: '#90a4ae', alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { color: C.white, fontSize: 28, fontWeight: '700' },

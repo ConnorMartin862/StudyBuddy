@@ -15,13 +15,6 @@ import { Platform } from 'react-native';
 const SETTINGS = [
   { id: '1', name: 'Push Notifications' },
   { id: '2', name: 'Dark Mode' },
-  { id: '3', name: 'Analytics' },
-  { id: '4', name: 'Auto-Match' },
-  { id: '5', name: 'Show Online Status' },
-  { id: '6', name: 'Sound Effects' },
-  { id: '7', name: 'Email Notifications' },
-  { id: '8', name: 'Profile Visibility' },
-  { id: '9', name: 'Data Sync' },
 ];
 
 export default function SettingsScreen() {

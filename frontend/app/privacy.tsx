@@ -29,65 +29,47 @@ export default function PrivacyScreen() {
           <Text style={[s.updated, { color: textSec }]}>Last updated: April 2026</Text>
 
           <Section title="Overview" card={card} border={border} textPri={textPri} textSec={textSec}>
-            StudyBuddy is a student study-partner matching app built for university students.
-            We are committed to protecting your privacy and being transparent about how we
-            handle your data.
+            StudyBuddy is a study-partner matching app designed for university students. We built this app to help students find compatible study partners in their classes. We take your privacy seriously and are committed to being transparent about how your data is collected, used, and protected.
           </Section>
 
           <Section title="Information We Collect" card={card} border={border} textPri={textPri} textSec={textSec}>
-            When you create an account, we collect your name, email address, and a hashed
-            version of your password. We also store information you voluntarily provide,
-            including your class schedule, course enrollments, and study preferences.
-            We collect your device's Expo push token to deliver notifications if you
-            enable them.
+            When you register, we collect your name, email address, and a securely hashed version of your password. As you use the app, we also store information you choose to provide such as your weekly schedule, enrolled classes, study preferences, and living situation. If you enable push notifications, we store your device push token to deliver alerts.
           </Section>
 
-          <Section title="How We Use Your Information" card={card} border={border} textPri={textPri} textSec={textSec}>
-            We use your information solely to operate the StudyBuddy service. This includes
-            matching you with other students in your classes, enabling direct messaging
-            between matched partners, and sending push notifications when you receive
-            messages or match requests. We do not sell your data or use it for advertising.
+          <Section title="How We Use Your Data" card={card} border={border} textPri={textPri} textSec={textSec}>
+            Your data is used exclusively to operate StudyBuddy. This includes calculating compatibility scores with other students, showing you relevant study partner recommendations, enabling direct messaging between matched users, and sending push notifications for messages and match activity. We do not sell your data, share it with third parties, or use it for advertising of any kind.
           </Section>
 
-          <Section title="Data Sharing" card={card} border={border} textPri={textPri} textSec={textSec}>
-            Your name and enrolled classes are visible to other students using the app.
-            Your email address and password are never shared. Direct messages are only
-            visible to you and the person you are messaging.
+          <Section title="What Other Users Can See" card={card} border={border} textPri={textPri} textSec={textSec}>
+            Other students can see your name, enrolled classes, study preferences, schedule availability, and compatibility score. Your email address and password are never visible to other users. Direct messages are private and only visible to you and the person you are messaging.
           </Section>
 
           <Section title="Push Notifications" card={card} border={border} textPri={textPri} textSec={textSec}>
-            If you enable push notifications, your device token is stored securely and
-            used only to deliver notifications from StudyBuddy. You can disable
-            notifications at any time in your device settings or in the app settings.
+            Push notifications are entirely optional. If you enable them, your device token is stored securely and used only to send StudyBuddy alerts such as new messages and match requests. You can disable notifications at any time from the Settings page in the app or from your device settings.
           </Section>
 
-          <Section title="Data Storage" card={card} border={border} textPri={textPri} textSec={textSec}>
-            Your data is stored in a secure cloud database. We take reasonable measures
-            to protect your information, but no system is completely secure. You are
-            responsible for keeping your password confidential.
+          <Section title="Data Security" card={card} border={border} textPri={textPri} textSec={textSec}>
+            All passwords are hashed using bcrypt before storage and are never stored in plain text. Your data is stored in a secure cloud database with encrypted connections. While we take reasonable precautions to protect your information, no system is completely immune to security risks. You are responsible for keeping your password confidential.
           </Section>
 
-          <Section title="Data Deletion" card={card} border={border} textPri={textPri} textSec={textSec}>
-            You can delete your account and all associated data directly from the app in
-            Settings. Upon deletion, your profile, messages, enrollments, and push token
-            will be permanently removed.
+          <Section title="Account & Data Deletion" card={card} border={border} textPri={textPri} textSec={textSec}>
+            You can permanently delete your account at any time from your Profile page. Deleting your account immediately and irreversibly removes all of your data including your profile, schedule, classes, matches, messages, and push token. This action cannot be undone.
           </Section>
 
-          <Section title="Children's Privacy" card={card} border={border} textPri={textPri} textSec={textSec}>
-            StudyBuddy is intended for use by university students aged 18 and older.
-            We do not knowingly collect information from anyone under 18.
+          <Section title="Blocking & Reporting" card={card} border={border} textPri={textPri} textSec={textSec}>
+            You can block any user at any time from their profile. Blocked users will not be able to see you in classes, search, or recommendations. You can also report users for inappropriate behavior. All reports are reviewed by our team and may result in account suspension or removal.
+          </Section>
+
+          <Section title="Age Requirement" card={card} border={border} textPri={textPri} textSec={textSec}>
+            StudyBuddy is intended for university students aged 18 and older. We do not knowingly collect or store personal information from anyone under the age of 18. If you believe a minor has created an account, please contact us immediately.
           </Section>
 
           <Section title="Changes to This Policy" card={card} border={border} textPri={textPri} textSec={textSec}>
-            We may update this privacy policy from time to time. We will notify users
-            of significant changes via the app. Continued use of StudyBuddy after changes
-            constitutes acceptance of the updated policy.
+            We may update this privacy policy as the app evolves. Significant changes will be communicated through the app. Continued use of StudyBuddy after any updates constitutes your acceptance of the revised policy.
           </Section>
 
-          <Section title="Contact" card={card} border={border} textPri={textPri} textSec={textSec}>
-            If you have any questions about this privacy policy or how we handle your
-            data, please contact us through the app or reach out to your institution's
-            StudyBuddy administrator.
+          <Section title="Contact Us" card={card} border={border} textPri={textPri} textSec={textSec}>
+            If you have questions, concerns, or requests regarding your privacy or this policy, please reach out to us at studybuddy.support.team@gmail.com. We aim to respond to all inquiries within 48 hours.
           </Section>
 
           <Text style={[s.footer, { color: textSec }]}>© 2026 StudyBuddy. All rights reserved.</Text>

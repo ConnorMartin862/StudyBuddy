@@ -1,4 +1,4 @@
-import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator, TextInput, Text, Modal } from 'react-native';
+import { StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator, TextInput, Text, Modal, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback, useMemo } from 'react';
 import { ThemedText } from '@/components/themed-text';
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   speechTail: {
     position: 'absolute',
     right: -8,
-    top: '50%',
+    top: Platform.OS === 'web' ? '50%' : '35%',
     marginTop: -6,
     width: 0,
     height: 0,

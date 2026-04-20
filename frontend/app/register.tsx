@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 import { Image } from 'expo-image';
 import { useTheme } from '@/context/theme';
 import { ThemedText } from '@/components/themed-text';
@@ -32,56 +32,71 @@ export default function RegisterScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Image
-        source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
-        style={styles.logo}
-      />
-      <ThemedText type="title" style={styles.title}>Create Account</ThemedText>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Full Name"
-        placeholderTextColor="#aaa"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#aaa"
-        autoCapitalize="none"
-        value={username}
-        onChangeText={setUsername}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#aaa"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#aaa"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-
-      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-        <ThemedText style={styles.buttonText}>
-          {loading ? 'Creating account...' : 'Sign Up'}
-        </ThemedText>
+      <Stack.Screen options={{ headerShown: false }} />
+      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <ThemedText style={styles.backTxt}>← Back</ThemedText>
       </TouchableOpacity>
+      <KeyboardAvoidingView
+        style={{ flex: 1, width: '100%' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Image
+            source={require('@/assets/images/Buddy_the_dolphin_transparent.png')}
+            style={styles.logo}
+          />
+          <ThemedText type="title" style={styles.title}>Create Account</ThemedText>
 
-      <TouchableOpacity onPress={() => router.push('/login')}>
-        <ThemedText style={styles.link}>Already have an account? Log in</ThemedText>
-      </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            placeholderTextColor="#aaa"
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            placeholderTextColor="#aaa"
+            autoCapitalize="none"
+            value={username}
+            onChangeText={setUsername}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#aaa"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#aaa"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+
+          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+
+          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+            <ThemedText style={styles.buttonText}>
+              {loading ? 'Creating account...' : 'Sign Up'}
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/login')}>
+            <ThemedText style={styles.link}>Already have an account? Log in</ThemedText>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
@@ -90,19 +105,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#4466c9',
+    padding: 30,
+  },
+  scroll: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 30,
   },
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 20,
+    marginBottom: 25,
   },
   title: {
     color: '#ffffff',
     fontSize: 32,
-    marginBottom: 40,
+    marginBottom: 45,
   },
   input: {
     width: '100%',
@@ -135,4 +153,15 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textDecorationLine: 'underline',
   },
+  backBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 20,
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  backTxt: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '600',
+  }
 });
