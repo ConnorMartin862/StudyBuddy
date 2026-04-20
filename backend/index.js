@@ -868,30 +868,6 @@ app.get('/blocks', requireAuth, async (req, res) => {
 
 app.post('/reports/:userId', requireAuth, async (req, res) => {
   const { reason } = req.body;
-  try {
-    await pool.query(
-      'INSERT INTO reports (reporter_id, reported_id, reason) VALUES ($1, $2, $3)',
-      [req.user.id, req.params.userId, reason]
-    );
-    res.json({ message: 'Report submitted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── Delete Account ────────────────────────────────────────────────────────────
-
-app.delete('/users/me', requireAuth, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
-    res.json({ message: 'Account deleted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/reports/:userId', requireAuth, async (req, res) => {
-  const { reason } = req.body;
   console.log('Report endpoint hit, reason:', reason, 'reported:', req.params.userId);
   try {
     await pool.query(
@@ -930,6 +906,18 @@ app.post('/reports/:userId', requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── Delete Account ────────────────────────────────────────────────────────────
+
+app.delete('/users/me', requireAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
+    res.json({ message: 'Account deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
