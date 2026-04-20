@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/context/auth';
-import { getPushStatus, pushStudent, unpushStudent, getCompatibility, getMyProfile, blockUser, reportUser } from '@/utils/api';
+import { getPushStatus, pushStudent, unpushStudent, getCompatibility, getMyProfile, blockUser, unblockUser, reportUser, getBlocks } from '@/utils/api';
 
 const C = {
   headerBg: '#1565c0',
@@ -107,7 +107,6 @@ export default function StudentProfileScreen() {
   const [combinedBlocks, setCombinedBlocks] = useState<ScheduleCell[]>([]);
   const [blocked, setBlocked] = useState(false);
 
-  // Report user modal
   const [reportVisible, setReportVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSending, setReportSending] = useState(false);
@@ -121,31 +120,24 @@ export default function StudentProfileScreen() {
     finally { setPushLoading(false); }
   };
 
-  const handleBlock = () => {
-    Alert.alert(
-      blocked ? 'Unblock User' : 'Block User',
+  const handleBlock = async () => {
+    const confirmed = window.confirm(
       blocked
         ? `Unblock ${student?.name}? They will be able to see your profile again.`
-        : `Block ${student?.name}? They won't be able to see your profile or message you.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: blocked ? 'Unblock' : 'Block',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (blocked) {
-                await (await import('@/utils/api')).unblockUser(id);
-                setBlocked(false);
-              } else {
-                await blockUser(id);
-                setBlocked(true);
-              }
-            } catch (e) { console.error('Block failed', e); }
-          },
-        },
-      ]
+        : `Block ${student?.name}? They won't be able to see your profile or message you.`
     );
+    if (!confirmed) return;
+    try {
+      if (blocked) {
+        await unblockUser(id);
+        setBlocked(false);
+      } else {
+        await blockUser(id);
+        setBlocked(true);
+      }
+    } catch (e) {
+      console.error('Block failed', e);
+    }
   };
 
   const handleReport = async () => {
@@ -184,11 +176,25 @@ export default function StudentProfileScreen() {
           living_situation: data.living_situation ?? null,
           sleep_preference: data.sleep_preference ?? null,
         });
+
         const statusRes = await getPushStatus(id);
         setPushStatus(statusRes.status);
-        const compatData = await getCompatibility();
-        const match = compatData.find((c: any) => c.user_b_id === id);
-        setScore(match ? Math.round(match.score * 100) : null);
+
+        try {
+          const blocks = await getBlocks();
+          setBlocked(blocks.some((b: any) => b.blocked_id === id));
+        } catch (e) {
+          console.warn('Failed to get blocks', e);
+        }
+
+        try {
+          const compatData = await getCompatibility();
+          const match = compatData.find((c: any) => c.user_b_id === id);
+          setScore(match ? Math.round(match.score * 100) : null);
+        } catch (e) {
+          console.warn('Failed to get compatibility', e);
+        }
+
         const me = await getMyProfile();
         const myBlocks: ScheduleCell[] = me.schedule ?? [];
         const theirBlocks: ScheduleCell[] = Array.isArray(data.schedule) ? data.schedule : [];
@@ -264,7 +270,6 @@ export default function StudentProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Block & Report buttons */}
         <View style={s.actionRow}>
           <TouchableOpacity style={[s.actionBtn, blocked && s.actionBtnActive]} onPress={handleBlock}>
             <Text style={s.actionBtnTxt}>{blocked ? '🚫 Blocked' : 'Block'}</Text>
@@ -331,7 +336,6 @@ export default function StudentProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* Report user modal */}
       <Modal visible={reportVisible} transparent animationType="fade">
         <View style={m.overlay}>
           <View style={m.sheet}>

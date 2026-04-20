@@ -236,14 +236,14 @@ export async function savePushToken(push_token: string) {
 }
 
 export async function blockUser(userId: string) {
-  return await request('POST', `/blocks/${userId}`);
+  return await request('POST', `/blocks/${userId}`, {});
 }
 
 export async function unblockUser(userId: string) {
   return await request('DELETE', `/blocks/${userId}`);
 }
 
-export async function getBlockedUsers() {
+export async function getBlocks() {
   return await request('GET', '/blocks');
 }
 

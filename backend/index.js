@@ -425,7 +425,9 @@ app.get('/pushes/matches', requireAuth, async (req, res) => {
       `SELECT u.id, u.name, u.email FROM users u
        JOIN pushes p1 ON p1.to_user_id = u.id
        JOIN pushes p2 ON p2.from_user_id = u.id AND p2.to_user_id = $1
-       WHERE p1.from_user_id = $1`,
+       WHERE p1.from_user_id = $1
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = u.id)
+         AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker_id = u.id AND blocked_id = $1)`,
       [req.user.id]
     );
     res.json(result.rows);
